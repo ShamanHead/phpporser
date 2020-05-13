@@ -443,6 +443,7 @@ class Parser{
 	    curl_setopt($curlSession, CURLOPT_RETURNTRANSFER, 1);
 	    curl_setopt($curlSession, CURLOPT_URL, $url);
 	    curl_setopt($curlSession, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13) Gecko/20080311 Firefox/2.0.0.13');
+	    curl_setopt($curlSession, CURLOPT_FOLLOWLOCATION, TRUE);
 	    curl_setopt($curlSession, CURLOPT_HTTPHEADER, array("Content-Type:multipart/form-data"));
 
 	    $returningData = curl_exec($curlSession);
@@ -455,9 +456,9 @@ class Parser{
 
 class Element{
 
-	private $__DOM;
-	private $__ELEMENT;
-	private $__ELEMENT_TYPE;
+	private $__DOM = [];
+	private $__ELEMENT = '';
+	private $__ELEMENT_TYPE = '';
 	private $__POINTS = [];
 	private $__ELEMENT_DOM = [];
 
@@ -467,39 +468,94 @@ class Element{
 		switch ($this->__ELEMENT[0]){
 			case '.':
 				$this->__ELEMENT_TYPE = 'class';
+				$this->__ELEMENT = str_replace('.', '',$element);
 			break;
 			case '#':
 				$this->__ELEMENT_TYPE = 'id';
+				$this->__ELEMENT = str_replace('#', '',$element);
 			break;
 			default:
 				$this->__ELEMENT_TYPE = 'tag';
-			break;
-			
+			break;	
 		}
+		$this->__ELEMENT_DOM = $this->parsDom($this->__DOM);
 	}
 
-	public function getDom($dom){
+	private function parsDom($dom = false){
+		if(!$dom) $dom = $this->__DOM;
 		$temporary_dom = [];
+		$elem = [];
 		for($i = 0;$i < count($dom);$i++){
 			if($this->__ELEMENT_TYPE == 'tag'){
+				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if($dom[$i]['tag'] != $this->__ELEMENT){
 					if($dom[$i][0]){
-						$obj = $this->getDom($dom[$i][0]);
-						array_push($temporary_dom, $obj);
+						$obj = $this->parsDom($dom[$i][0]);
+						if($obj) array_push($temporary_dom, $obj[0]);
 					}
 				}else{
-					array_push($temporary_dom, $dom[$i]);
+					array_push($temporary_dom, $dom[$i][0]);
+				}
+			}
+			if($this->__ELEMENT_TYPE == 'id'){
+				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
+				if(!$dom[$i]['id']){
+					if($dom[$i][0]){
+						$obj = $this->parsDom($dom[$i][0]);
+						if($obj) array_push($temporary_dom, $obj[0]);
+					}
+				}else{
+					for($j = 0;$j < count($dom[$i]['id']);$j++){
+						if($dom[$i]['id'][$j] != $this->__ELEMENT){
+							if($dom[$i][0]){
+								$obj = $this->parsDom($dom[$i][0]);
+								if($obj) array_push($temporary_dom, $obj[0]);
+							}
+						}else{
+							array_push($temporary_dom, $dom[$i][0]);
+						}
+					}
+				}
+			}
+			if($this->__ELEMENT_TYPE == 'class'){
+				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
+				if(!$dom[$i]['class']){
+					if($dom[$i][0]){
+						$obj = $this->parsDom($dom[$i][0]);
+						if($obj) array_push($temporary_dom, $obj[0]);
+					}
+				}else{
+					for($j = 0;$j < count($dom[$i]['class']);$j++){
+						if($dom[$i]['class'][$j] != $this->__ELEMENT){
+							if($dom[$i][0]){
+								$obj = $this->parsDom($dom[$i][0]);
+								if($obj) array_push($temporary_dom, $obj[0]);
+							}
+						}else{
+							array_push($temporary_dom, $dom[$i][0]);
+						}
+					}
 				}
 			}
 		}
-		return [$temporary_dom, $i];
+		return $temporary_dom;
+	}
+
+	public function viewDom(){
+		return $this->__ELEMENT_DOM;
 	}
 
 	public function getElementType(){
 		return $this->__ELEMENT_TYPE;
 	}
 
-	public function children(){}
+	public function children(int $number){
+		$result = [];
+		for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
+			array_push($result, $this->__ELEMENT_DOM[$i][$number]);
+		}
+		return $result;
+	}
 }
 
 ?>
