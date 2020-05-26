@@ -1,6 +1,8 @@
 <?php
 
-class Parser{
+namespace Parser;
+
+class Dom{
 
 	private $sourceText;
 	private $dom;
@@ -11,13 +13,10 @@ class Parser{
     private $__RECURTION_ERROR_OUTPUT = false;
     private $__DEBUG_MODE = false;
 
-	function __construct($url, $enable_comments = false, $escape_closing_tags = false){
+	function __construct($url, $enable_comments = false){
 		if($enable_comments){
 			$this->__ENABLE_COMMENTS = true;
 		}
-      	if($escape_closing_tags == true){
-          $this->__ESCAPE_CLOSING_TAGS = true;
-        }
 		if($this->sourceText){
 			throw new Exception('sourceText exists!');
 		}else{
@@ -127,9 +126,7 @@ class Parser{
 					  			continue;
 					  		}
 					  }
-                      if($this->__ESCAPE_CLOSING_TAGS != true){
-                       array_push($result, $current_tag);
-                      }
+                      array_push($result, $current_tag);
                       $point = $this->node_tag_tracker($open_tags, $current_tag['tag']);
                       $open_tags[$point]['count']--;
 						return [$result, $i, $open_tags];
@@ -372,6 +369,9 @@ class Parser{
 									if($this->escape_symbols($this->__ESCAPE_SYMBOLS, $text)){
 										$stack[] = ['tag' => '__TEXT',htmlspecialchars($text)];
 										$text = '';
+									}else if($this->escape_symbols($this->__ESCAPE_SYMBOLS, $text) == '0'){
+										$stack[] = ['tag' => '__TEXT',htmlspecialchars($text)];
+										$text = '';
 									}
 									$stack[] = $temporary_tag;
 								}else{
@@ -411,67 +411,6 @@ class Parser{
 			}
 		}
 		return count($array);
-	}
-
-	public function setDebugMode(bool $value){
-		$this->__DEBUG_MODE = $value;
-	}
-
-	public function debug(){
-		$this->dom();
-		if(!$this->__DEBUG_MODE) throw new Exception('debug() can work only if debug mode is on');
-		$opens = 0;
-		$closens = 0;
-		$close_singleton = 0;
-		$closens2 = [];
-		$opens2 = [];
-		for($i = 0;$i < count($this->dom);$i++){
-			if(!$this->dom[$i]['is_singleton'] && $this->dom[$i]['tag'] != '__TEXT' && $this->dom[$i]['tag'] != '__COMMENT'){
-				if($this->dom[$i]['is_closing']){
-					$closens++;
-					$closens2[] = $this->dom[$i]['tag'];
-				}else{
-					$opens++;
-					$opens2[] = $this->dom[$i]['tag'];
-				}
-			}
-		}
-		$counted_closens = [];
-		$counted_opens = [];
-		$finded = false;
-		for($i = 0;$i < count($opens2);$i++){
-			for($j = 0;$j < count($counted_opens);$j++){
-				if($opens2[$i] == $counted_opens[$j][0]){
-					$counted_opens[$j][1]++;
-					$finded = true;
-				}
-			}
-			if($finded == true){
-				$finded = false;
-			}else{
-				$counted_opens[] = [$opens2[$i], 1];
-			}
-		}
-		for($i = 0;$i < count($closens2);$i++){
-			for($j = 0;$j < count($counted_closens);$j++){
-				if($closens2[$i] == $counted_closens[$j][0]){
-					$counted_closens[$j][1]++;
-					$finded = true;
-				}
-			}
-			if($finded == true){
-				$finded = false;
-			}else{
-				$counted_closens[] = [$closens2[$i], 1];
-			}
-		}
-		sort($counted_opens);
-		sort($counted_closens);
-		return [$counted_opens,$counted_closens];
-	}
-
-	public function setRecurtionErrorOutput(bool $value){
-		$this->__RECURTION_ERROR_OUTPUT = $value;
 	}
 
 	public function find(string $element){
@@ -537,11 +476,7 @@ class Element{
 						if($obj) array_push($temporary_dom, $obj);
 					}
 				}else{
-					if($dom[$i]['is_singleton']){
-						array_push($temporary_dom, $dom[$i]);
-					}else{
-						array_push($temporary_dom, $dom[$i][0]);
-					}
+					array_push($temporary_dom, $dom[$i]);
 				}
 			}
 			if($this->__ELEMENT_TYPE == 'id'){
@@ -559,11 +494,7 @@ class Element{
 						}
 					}
 					if($finded){
-						if($dom[$i]['is_singleton']){
-							array_push($temporary_dom, $dom[$i]);
-						}else{
-							array_push($temporary_dom, $dom[$i][0]);
-						}
+						array_push($temporary_dom, $dom[$i]);
 					}else{
 						if($dom[$i][0]){
 							$obj = $this->parsDom($dom[$i]);
@@ -587,11 +518,7 @@ class Element{
 						}
 					}
 					if($finded){
-						if($dom[$i]['is_singleton']){
-							array_push($temporary_dom, $dom[$i]);
-						}else{
-							array_push($temporary_dom, $dom[$i][0]);
-						}
+						array_push($temporary_dom, $dom[$i]);
 					}else{
 						if($dom[$i][0]){
 							$obj = $this->parsDom($dom[$i]);
@@ -601,10 +528,6 @@ class Element{
 				}
 			}
 		}
-		 //return $this->one_array($temporary_dom);
-		// while(!$temporary_dom[0]['tag']){
-		// 	$temporary_dom = $temporary_dom[0];
-		// }
 		return $temporary_dom;
 	}
 
@@ -643,7 +566,7 @@ class Element{
 
 	public function children(int $number){
 		$result = [];
-		array_push($result, $this->__ELEMENT_DOM[$number]);
+		array_push($result, $this->__ELEMENT_DOM[0][$number]);
 		return new Children($result);
 	}
 }
@@ -665,12 +588,13 @@ Class Children{
 
 	public function children(int $number) {
 		$result = [];
-		array_push($result, $this->__DOM[$number]);
+		array_push($result, $this->__DOM[0][$number]);
 		return new Children($result);
 	}
 
 	public function plainText(){
 		$result = [];
+		if($this->__DOM['tag']) return $this->__DOM[0];
 		for($i = 0;$i < count($this->__DOM);$i++){
 			for($j = 0;$j < count($this->__DOM[$i]);$j++){
 				if($this->__DOM[$i][$j]['tag'] == '__TEXT'){
