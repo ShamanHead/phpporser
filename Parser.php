@@ -31,7 +31,7 @@ class Parser{
 	}
 
 	public function dom(){
-		if(!$this->dom) $this->dom = $this->pars($this->sourceText);
+		if(!$this->dom) $this->dom = $this->pars($this->sourceText)[0];
 		return $this->dom;
 	}
 
@@ -73,24 +73,28 @@ class Parser{
 			return $result;
 	}
 
-	private function stack_recurtion(array $stack, int $pointer){
+	private function stack_recurtion(array $stack, int $pointer, array $main_tag = [], array $open_tags = []){
 				$result = [];
 				for($i = $pointer;$i < count($stack);$i++){
 					$current_tag = $stack[$i];
 					if((!$current_tag['is_singleton']) && (!$current_tag['is_closing']) && ($current_tag['tag'] != '__TEXT' && $current_tag['tag'] != '__COMMENT')){
-						$dependend_tags = $this->stack_recurtion($stack, $i+1);
+
+						$point = $this->node_tag_tracker($open_tags, $current_tag['tag']);
+						if(!$open_tags[$point]){
+							$open_tags[$point]['tag'] = $current_tag['tag'];
+							$open_tags[$point]['count'] = 1;
+						}else{
+							$open_tags[$point]['count']++;
+						}
+
+						$dependend_tags = $this->stack_recurtion($stack, $i+1, $current_tag, $open_tags);
+						$open_tags = $dependend_tags[2];
+
 						array_push($current_tag, $dependend_tags[0]);
 						array_push($result,$current_tag);
+
 						$this->__RECURTION_INPUTS++;
 						$i = $dependend_tags[1];
-					}
-
-					if($this->__RECURTION_INPUTS > count($stack)){
-						if($this->__RECURTION_ERROR_OUTPUT){
-							throw new Exception('Error in recurtion.Try debug() to see more info');
-						}else{
-							return [$result, $i];
-						}
 					}
 
 					if($current_tag['tag'] == '__TEXT' || $current_tag['tag'] == '__COMMENT'){
@@ -99,14 +103,40 @@ class Parser{
 					if($current_tag['is_singleton']){
 						array_push($result, $current_tag);
 					}else if($current_tag['is_closing']){
+					  if($main_tag['tag'] != $current_tag['tag']){
+					  	$finded = false;
+						  	for($h = 0;$h < count($open_tags);$h++){
+						  		if($open_tags[$h]['count'] > 0 && $open_tags[$h]['tag'] == $main_tag['tag']){
+						  			for($z = 0;$z < count($open_tags);$z++){
+						  				if($open_tags[$z]['count'] > 0 && $open_tags[$z]['tag'] == $current_tag['tag']){
+						  					$finded = $h;
+						  				}
+						  			}
+						  		}
+						  	}
+					  		if($finded){
+					  			$open_tags[$finded]['count']--;
+					  			$splice_tag = ['tag' => $open_tags[$finded]['tag'], 'is_closing' => true];
+								array_splice($result, $i, 0, [$splice_tag]);
+								if($finded['count'] == 0){
+									return [$result, $i-1, $open_tags];
+								}else{
+									return [$result, $i-1, $open_tags];
+								}
+					  		}else{
+					  			continue;
+					  		}
+					  }
                       if($this->__ESCAPE_CLOSING_TAGS != true){
                        array_push($result, $current_tag);
                       }
-						return [$result, $i];
+                      $point = $this->node_tag_tracker($open_tags, $current_tag['tag']);
+                      $open_tags[$point]['count']--;
+						return [$result, $i, $open_tags];
 					}
 
 				}
-				return $result;
+				return [$result, $i, $open_tags];
 			}
 
 		private function escape_comments($html, $position = 0){
@@ -306,7 +336,6 @@ class Parser{
 				$text_stack = [];
 				$ignore_html = false;
 
-
 				for($i = 0;$i < $lenght;$i++){
 					if($html[$i] == '<' && $this->escape_symbols(["<","\n"," ", "\t", "\e", "\f", "\v", "\r"], $html[$i+1])){
 						if($this->escape_symbols(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","/", "!"], $html[$i+1])){
@@ -359,7 +388,7 @@ class Parser{
 				if($this->__DEBUG_MODE){
 					return $stack;
 				}else{
-					return $this->stack_recurtion($stack,0);
+					return $this->stack_recurtion($stack, 0);
 				}
 			}
 
@@ -373,6 +402,15 @@ class Parser{
 
 	public function dump() {
 		return htmlspecialchars($this->sourceText);
+	}
+
+	public function node_tag_tracker($array ,string $tag){
+		for($i = 0;$i < count($array);$i++){
+			if($array[$i]['tag'] == $tag){
+				return $i;
+			}
+		}
+		return count($array);
 	}
 
 	public function setDebugMode(bool $value){
@@ -436,6 +474,11 @@ class Parser{
 		$this->__RECURTION_ERROR_OUTPUT = $value;
 	}
 
+	public function find(string $element){
+		if(!$this->dom) $this->dom = $this->pars($this->sourceText);
+		return new Element($this->dom, $element);
+	}
+
 	private function query(string $url): string {
 		$curlSession = curl_init();
 
@@ -462,8 +505,8 @@ class Element{
 	private $__POINTS = [];
 	private $__ELEMENT_DOM = [];
 
-	function __construct(Parser $parser, string $element){
-		$this->__DOM = $parser->dom();
+	function __construct(array $dom, string $element){
+		$this->__DOM = $dom;
 		$this->__ELEMENT = str_replace(' ', '',$element);
 		switch ($this->__ELEMENT[0]){
 			case '.':
@@ -484,35 +527,47 @@ class Element{
 	private function parsDom($dom = false){
 		if(!$dom) $dom = $this->__DOM;
 		$temporary_dom = [];
-		$elem = [];
+		$dom = $this->one_dom($dom);
 		for($i = 0;$i < count($dom);$i++){
 			if($this->__ELEMENT_TYPE == 'tag'){
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if($dom[$i]['tag'] != $this->__ELEMENT){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i][0]);
-						if($obj) array_push($temporary_dom, $obj[0]);
+						$obj = $this->parsDom($dom[$i]);
+						if($obj) array_push($temporary_dom, $obj);
 					}
 				}else{
-					array_push($temporary_dom, $dom[$i][0]);
+					if($dom[$i]['is_singleton']){
+						array_push($temporary_dom, $dom[$i]);
+					}else{
+						array_push($temporary_dom, $dom[$i][0]);
+					}
 				}
 			}
 			if($this->__ELEMENT_TYPE == 'id'){
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if(!$dom[$i]['id']){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i][0]);
-						if($obj) array_push($temporary_dom, $obj[0]);
+						$obj = $this->parsDom($dom[$i]);
+						if($obj) array_push($temporary_dom, $obj);
 					}
 				}else{
+					$finded = false;
 					for($j = 0;$j < count($dom[$i]['id']);$j++){
-						if($dom[$i]['id'][$j] != $this->__ELEMENT){
-							if($dom[$i][0]){
-								$obj = $this->parsDom($dom[$i][0]);
-								if($obj) array_push($temporary_dom, $obj[0]);
-							}
+						if($dom[$i]['id'][$j] == $this->__ELEMENT){
+							$finded = true;
+						}
+					}
+					if($finded){
+						if($dom[$i]['is_singleton']){
+							array_push($temporary_dom, $dom[$i]);
 						}else{
 							array_push($temporary_dom, $dom[$i][0]);
+						}
+					}else{
+						if($dom[$i][0]){
+							$obj = $this->parsDom($dom[$i]);
+							if($obj) array_push($temporary_dom, $obj);
 						}
 					}
 				}
@@ -521,23 +576,35 @@ class Element{
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if(!$dom[$i]['class']){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i][0]);
-						if($obj) array_push($temporary_dom, $obj[0]);
+						$obj = $this->parsDom($dom[$i]);
+						if($obj) array_push($temporary_dom, $obj);
 					}
 				}else{
+					$finded = false;
 					for($j = 0;$j < count($dom[$i]['class']);$j++){
-						if($dom[$i]['class'][$j] != $this->__ELEMENT){
-							if($dom[$i][0]){
-								$obj = $this->parsDom($dom[$i][0]);
-								if($obj) array_push($temporary_dom, $obj[0]);
-							}
+						if($dom[$i]['class'][$j] == $this->__ELEMENT){
+							$finded = true;
+						}
+					}
+					if($finded){
+						if($dom[$i]['is_singleton']){
+							array_push($temporary_dom, $dom[$i]);
 						}else{
 							array_push($temporary_dom, $dom[$i][0]);
+						}
+					}else{
+						if($dom[$i][0]){
+							$obj = $this->parsDom($dom[$i]);
+							if($obj) array_push($temporary_dom, $obj);
 						}
 					}
 				}
 			}
 		}
+		 //return $this->one_array($temporary_dom);
+		// while(!$temporary_dom[0]['tag']){
+		// 	$temporary_dom = $temporary_dom[0];
+		// }
 		return $temporary_dom;
 	}
 
@@ -549,12 +616,79 @@ class Element{
 		return $this->__ELEMENT_TYPE;
 	}
 
-	public function children(int $number){
+	private function one_dom(array $dom){
+		$is_empty = true;
+		$is_empty_dom = $dom;
+		while(count($is_empty_dom) <= 1){
+			$is_empty_dom = $is_empty_dom[0];
+		}
+		return $is_empty_dom;
+	}
+
+	public function plainText(){
 		$result = [];
 		for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
-			array_push($result, $this->__ELEMENT_DOM[$i][$number]);
+			for($j = 0;$j < count($this->__ELEMENT_DOM[$i]);$j++){
+				if($this->__ELEMENT_DOM[$i][$j]['tag'] == '__TEXT'){
+					array_push($result, $this->__ELEMENT_DOM[$i][$j][0]);
+				}
+			}
 		}
 		return $result;
+	}
+
+	public function find(string $element){
+		return new Element([$this->__ELEMENT_DOM], $element);
+	}
+
+	public function children(int $number){
+		$result = [];
+		array_push($result, $this->__ELEMENT_DOM[$number]);
+		return new Children($result);
+	}
+}
+
+Class Children{
+	private $__DOM = [];
+
+	function __construct($dom){
+		$this->__DOM = $this->one_dom($dom);
+	}
+
+	public function find(string $element){
+		return new Element($this->__DOM, $element);
+	}
+
+	public function viewDom(){
+		return $this->__DOM;
+	}
+
+	public function children(int $number) {
+		$result = [];
+		array_push($result, $this->__DOM[$number]);
+		return new Children($result);
+	}
+
+	public function plainText(){
+		$result = [];
+		for($i = 0;$i < count($this->__DOM);$i++){
+			for($j = 0;$j < count($this->__DOM[$i]);$j++){
+				if($this->__DOM[$i][$j]['tag'] == '__TEXT'){
+					array_push($result, $this->__DOM[$i][$j][0]);
+				}
+			}
+		}
+		return $result;
+	}
+
+	private function one_dom(array $dom){
+		$is_empty = true;
+		$is_empty_dom = $dom;
+		while(count($is_empty_dom) <= 1 && !$is_empty_dom['tag']){
+			$is_empty_dom = $is_empty_dom[0];
+		}
+		print_r(count($is_empty_dom));
+		return $is_empty_dom;
 	}
 }
 
