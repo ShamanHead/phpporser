@@ -1,3 +1,4 @@
+#phporser
 <ul>
 	<li>Introducion</li>
 	<li>Find</li>
@@ -15,26 +16,23 @@ This php library contains an instrumentary to work with html document.You can wo
 To create a Parser object you need to include this library to your project:
 
 ```PHP
-	
-	use Parser\Dom as Dom;
+use Parser\Dom as Dom;
 
-	$html = new Dom('url or href to file');
+$html = new Dom('url or href to file');
 
 ```
 
 You can look the dom using this:
 
 ```PHP
-
-	print_r($html->dom());
+print_r($html->dom());
 
 ```
 
 You can also look source file code using this:
 
 ```PHP
-	
-	print_r($html->dump());
+print_r($html->dump());
 
 ```
 
@@ -45,10 +43,9 @@ You can also look source file code using this:
 To find element, you can this two functions:
 
 ```PHP
+$html->find('elem');
 
-	$html->find('elem');
-
-	$html->children(1);
+$html->children(1);
 
 ```
 
@@ -59,8 +56,7 @@ Second method finds second children in your main dom("head" at example) and all 
 You can also use this method together:
 
 ```PHP
-	
-	$html->find('head')->children(0); //It can be link
+$html->find('head')->children(0); //It can be link
 
 ```
 
@@ -69,8 +65,7 @@ You can also use this method together:
 You can find text easily using this method:
 
 ```PHP
-	
-	$html->plainText();
+$html->plainText();
 
 ```
 
