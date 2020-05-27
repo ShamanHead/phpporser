@@ -51,6 +51,7 @@ class Dom{
 					return true;
 				}
 			}
+			unset($non_close_tags);
 			return false;
 		}
 
@@ -413,9 +414,9 @@ class Dom{
 		return count($array);
 	}
 
-	public function find(string $element){
+	public function find(string $element, $number = -1){
 		if(!$this->dom) $this->dom = $this->pars($this->sourceText);
-		return new Element($this->dom, $element);
+		return new Element($this->dom[0], $element, $number);
 	}
 
 	private function query(string $url): string {
@@ -443,8 +444,9 @@ class Element{
 	private $__ELEMENT_TYPE = '';
 	private $__POINTS = [];
 	private $__ELEMENT_DOM = [];
+	private $__ELEMENT_NUMBER = 0;
 
-	function __construct(array $dom, string $element){
+	function __construct(array $dom, string $element, int $number){
 		$this->__DOM = $dom;
 		$this->__ELEMENT = str_replace(' ', '',$element);
 		switch ($this->__ELEMENT[0]){
@@ -460,31 +462,59 @@ class Element{
 				$this->__ELEMENT_TYPE = 'tag';
 			break;	
 		}
-		$this->__ELEMENT_DOM = $this->parsDom($this->__DOM);
+		$this->__ELEMENT_DOM = $this->parsDom($this->__DOM, $number)[0];
+		print_r($this->parsDom($this->__DOM, $number)[1].' ');
 	}
 
-	private function parsDom($dom = false){
+	private function parsDom($dom = false, $number = -1, $point = 0){
 		if(!$dom) $dom = $this->__DOM;
 		$temporary_dom = [];
 		$dom = $this->one_dom($dom);
 		for($i = 0;$i < count($dom);$i++){
 			if($this->__ELEMENT_TYPE == 'tag'){
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
-				if($dom[$i]['tag'] != $this->__ELEMENT){
+				if($dom[$i]['tag'] != $this->__ELEMENT && $dom[$i]['is_closing'] != true){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i]);
-						if($obj) array_push($temporary_dom, $obj);
+						$obj = $this->parsDom($dom[$i],$number, $point);
+						if($obj[0]){
+							if(isset($obj[1]) == false){
+								return [$obj];
+							}else{
+								$point = $obj[1];
+								array_push($temporary_dom, $obj[0]);
+							}
+						}
 					}
-				}else{
-					array_push($temporary_dom, $dom[$i]);
+				}else if($dom[$i]['is_closing'] != true){
+					$obj = $this->parsDom($dom[$i],$number, $point);
+					if($point == $number-1){
+						return [$dom[$i][0]];
+					}
+					if(isset($obj[1]) == false){
+						return [$obj];
+					}else{
+						$point = $obj[1]+1;
+						if($dom[$i]['is_singleton']){
+							array_push($temporary_dom, $dom[$i]);
+						}else{
+							array_push($temporary_dom, $dom[$i][0]);
+						}
+					}
 				}
 			}
 			if($this->__ELEMENT_TYPE == 'id'){
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if(!$dom[$i]['id']){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i]);
-						if($obj) array_push($temporary_dom, $obj);
+						$obj = $this->parsDom($dom[$i],$number, $point);
+						if($obj[0]){
+							if(isset($obj[1]) == false){
+								return [$obj];
+							}else{
+								$point = $obj[1];
+								array_push($temporary_dom, $obj[0]);
+							}
+						}
 					}
 				}else{
 					$finded = false;
@@ -494,11 +524,27 @@ class Element{
 						}
 					}
 					if($finded){
-						array_push($temporary_dom, $dom[$i]);
+						$obj = $this->parsDom($dom[$i][0],$number, $point);
+						if($point == $number-1){
+							return [$dom[$i][0]];
+						}
+						if(isset($obj[1]) == false){
+							return [$obj];
+						}else{
+							$point = $obj[1]+1;
+							array_push($temporary_dom, $dom[$i][0]);
+						}
 					}else{
 						if($dom[$i][0]){
-							$obj = $this->parsDom($dom[$i]);
-							if($obj) array_push($temporary_dom, $obj);
+							$obj = $this->parsDom($dom[$i],$number, $point);
+							if($obj[0]){
+								if(isset($obj[1]) == false){
+									return [$obj];
+								}else{
+									$point = $obj[1];
+									array_push($temporary_dom, $obj[0]);
+								}
+							}
 						}
 					}
 				}
@@ -507,8 +553,15 @@ class Element{
 				if($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT') continue;
 				if(!$dom[$i]['class']){
 					if($dom[$i][0]){
-						$obj = $this->parsDom($dom[$i]);
-						if($obj) array_push($temporary_dom, $obj);
+						$obj = $this->parsDom($dom[$i],$number, $point);
+						if($obj[0]){
+							if(isset($obj[1]) == false){
+								return [$obj];
+							}else{
+								$point = $obj[1];
+								array_push($temporary_dom, $obj[0]);
+							}
+						}
 					}
 				}else{
 					$finded = false;
@@ -518,17 +571,33 @@ class Element{
 						}
 					}
 					if($finded){
-						array_push($temporary_dom, $dom[$i]);
+						$obj = $this->parsDom($dom[$i][0],$number, $point);
+						if($point == $number-1){
+							return [$dom[$i][0]];
+						}
+						if(isset($obj[1]) == false){
+							return [$obj];
+						}else{
+							$point = $obj[1]+1;
+							array_push($temporary_dom, $dom[$i][0]);
+						}
 					}else{
 						if($dom[$i][0]){
-							$obj = $this->parsDom($dom[$i]);
-							if($obj) array_push($temporary_dom, $obj);
+							$obj = $this->parsDom($dom[$i],$number, $point);
+							if($obj[0]){
+								if(isset($obj[1]) == false){
+									return [$obj];
+								}else{
+									$point = $obj[1];
+									array_push($temporary_dom, $obj[0]);
+								}
+							}
 						}
 					}
 				}
 			}
 		}
-		return $temporary_dom;
+		return [$temporary_dom, $point];
 	}
 
 	public function viewDom(){
@@ -560,13 +629,13 @@ class Element{
 		return $result;
 	}
 
-	public function find(string $element){
+	public function find(string $element, int $number = -1){
 		return new Element([$this->__ELEMENT_DOM], $element);
 	}
 
 	public function children(int $number){
 		$result = [];
-		array_push($result, $this->__ELEMENT_DOM[0][$number]);
+		array_push($result, $this->__ELEMENT_DOM[$number]);
 		return new Children($result);
 	}
 }
@@ -575,7 +644,11 @@ Class Children{
 	private $__DOM = [];
 
 	function __construct($dom){
-		$this->__DOM = $this->one_dom($dom);
+		if($dom[0]){
+			$this->__DOM = $this->one_dom($dom);
+		}else{
+			throw new \Exception("Children not found");
+		}
 	}
 
 	public function find(string $element){
@@ -588,7 +661,7 @@ Class Children{
 
 	public function children(int $number) {
 		$result = [];
-		array_push($result, $this->__DOM[0][$number]);
+		array_push($result, $this->__DOM[$number]);
 		return new Children($result);
 	}
 
