@@ -408,8 +408,11 @@ class Dom{
 		return $this->sourceText;
 	}
 
-	public function dump() {
-		return htmlspecialchars($this->sourceText);
+	public function dump(string $filename = '') {
+		if($filename == '') return htmlspecialchars($this->sourceText);
+		$dump = fopen($filename, 'w+');
+		fwrite($dump, $this->sourceText);
+		return true;
 	}
 
 	public function node_tag_tracker($array ,string $tag){
@@ -626,10 +629,11 @@ class Element{
 
 	public function plainText(){
 		$result = [];
-		for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
-			for($j = 0;$j < count($this->__ELEMENT_DOM[$i]);$j++){
-				if($this->__ELEMENT_DOM[$i][$j]['tag'] == '__TEXT'){
-					array_push($result, $this->__ELEMENT_DOM[$i][$j][0]);
+		if($this->__DOM['tag']) return $this->__DOM[0];
+		for($i = 0;$i < count($this->__DOM);$i++){
+			for($j = 0;$j < count($this->__DOM[$i]);$j++){
+				if($this->__DOM[$i][$j]['tag'] == '__TEXT'){
+					array_push($result, $this->__DOM[$i][$j][0]);
 				}
 			}
 		}
