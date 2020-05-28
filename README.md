@@ -51,7 +51,7 @@ echo $html->read();
 To find element, you can this two functions:
 
 ```PHP
-$html->find('elem');
+$html->find('elem', 1); //You can indicate what element with tag "elem" you want to get
 
 $html->children(1);
 
