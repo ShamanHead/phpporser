@@ -38,6 +38,12 @@ print_r($html->dump(string $filename)); //You can indicate file where will be wr
 
 ```
 
+You can also look html that was finded by url:
+
+```PHP
+echo $html->read();
+```
+
 <h3 id = 'Find'>Finding tags and childrens</h3>
 
 <h3 id = 'Find$Elements'>Find Elements</h3>
@@ -49,6 +55,7 @@ $html->find('elem');
 
 $html->children(1);
 
+$html->children(1)->viewDom(); //you can use this method to see the result that will finded by script.
 ```
 
 First method finds tag with name "elem".You can also find elements by class or id.You can do it, marking element by special symbols "." or "#".
