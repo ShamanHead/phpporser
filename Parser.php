@@ -362,7 +362,7 @@ class Dom{
 							continue;
 						}else
 						if($temporary_tag['error_code'] && !$ignore_html){
-							throw new Exception($temporary_tag[0]);
+							throw new \Exception($temporary_tag[0]);
 						}
 						if(($temporary_tag['tag'] == 'script' || $temporary_tag['tag'] == 'style') && $temporary_tag['is_closing'] == 0){
 							$ignore_html = true;
@@ -427,6 +427,10 @@ class Dom{
 	public function find(string $element, $number = -1){
 		if(!$this->dom) $this->dom = $this->pars($this->sourceText);
 		return new Element($this->dom[0], $element, $number);
+	}
+
+	public function setDebugMode($value){
+		$this->__DEBUG_MODE = $value;
 	}
 
 	private function query(string $url): string {
