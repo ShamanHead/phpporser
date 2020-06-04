@@ -41,11 +41,9 @@ class Dom{
 		return $this->dom;
 	}
 
-	private function space_jitter($position, $text, $s_pointer = false) : int{
-			if(!$s_pointer){
-				$s_pointer = strlen($text);
-			}
-			for($i = $position+1;$i < $s_pointer;$i++){
+	private function space_jitter($position, $text) : int{
+			$text_strlen = strlen($text);
+			for($i = $position+1;$i < $text_strlen;$i++){
 				if($text[$i] != ' ') return $i;
 			}
 			return false;
@@ -163,15 +161,10 @@ class Dom{
 
 				}
 
-		private function read_tag(string $html, int $f_pointer = 0, int $s_pointer = 0) : array{
-
-		if(!$s_pointer){
-			$s_pointer = strlen($html);
-		}
-
+		private function read_tag(string $html, int $f_pointer = 0) : array{
 		$result = ['is_closing' => false, 'is_singleton' => false];
 
-		$is_comment_tag = false;
+		$html_strlen = strlen($html);
 		$tag= '';
 		$attribute='';
 		$value = '';
@@ -181,9 +174,9 @@ class Dom{
 		$closed_tag = false;
 		$without_parth = false;
 
-		for($i = $f_pointer;$i < $s_pointer;$i++, $result['pointer'] = $i){
+		for($i = $f_pointer;$i < $html_strlen;$i++, $result['pointer'] = $i){
 			if($closed_tag) break;
-			if($i == $s_pointer-1 && $html[$i] != '>') throw new Exception('Cannot find \'>\' symbol');
+			if($i == $html_strlen-1 && $html[$i] != '>') throw new Exception('Cannot find \'>\' symbol');
 			switch($html[$i]){
 				case ' ':
 				if($state == 'tag' && $tag != false){
@@ -199,7 +192,7 @@ class Dom{
 						$value .= $html[$i];
 					}				
 				}else if($state == 'attribute' && $attribute != false){
-					$symbol = $html[$this->space_jitter($i, $html, $s_pointer)];
+					$symbol = $html[$this->space_jitter($i, $html)];
 					if($symbol == '='){
 						continue;
 					}else{
@@ -210,7 +203,7 @@ class Dom{
 						$bracket = 0;
 						$bracket_count = 0;
 					}
-					$i = $this->space_jitter($i, $html, $s_pointer)-1;
+					$i = $this->space_jitter($i, $html)-1;
 				}
 				break;
 				case '>':
@@ -290,9 +283,9 @@ class Dom{
 						$result['is_closing'] = true;
 					}else if($state == 'attribute_value'){
 						$value.= $html[$i];
-					}else if($html[$this->space_jitter($i, $html, $s_pointer)] == '>'){
+					}else if($html[$this->space_jitter($i, $html)] == '>'){
 						$result['is_closing'] = true;
-						$i = $this->space_jitter($i, $html, $s_pointer)-1;
+						$i = $this->space_jitter($i, $html)-1;
 					}
 					break;
 					case '<':
@@ -327,12 +320,8 @@ class Dom{
 			return $result;
 		}
 
-	private function node(string $html, int $f_pointer = 0, int $s_pointer = 0) : array {
+	private function node(string $html, int $f_pointer = 0) : array {
 				$lenght = strlen($html);
-
-				if(!$s_pointer){
-					$s_pointer = $lenght;
-				}
 
 				$result;
 				$stack = [];
