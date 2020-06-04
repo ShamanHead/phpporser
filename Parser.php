@@ -187,7 +187,7 @@ class Dom{
 			switch($html[$i]){
 				case ' ':
 				if($state == 'tag' && $tag != false){
-					$result['tag'] = $this->escape_symbols($this->__ESCAPE_SYMBOLS, $tag);
+					$result['tag'] = $tag;
 					$state = 'attribute';
 				}else if($state == 'attribute_value'){
 					if($without_parth){
@@ -216,7 +216,7 @@ class Dom{
 				case '>':
 				switch($state){
 					case 'tag':
-					if($tag != false) $result['tag'] = $this->escape_symbols($this->__ESCAPE_SYMBOLS, $tag);
+					if($tag != false) $result['tag'] = $tag;
 					$closed_tag = true;
 					break;
 					case 'attribute_value_starting':
@@ -633,11 +633,16 @@ class Element{
 
 	public function plainText(){
 		$result = [];
-		if($this->__DOM['tag']) return $this->__DOM[0];
-		for($i = 0;$i < count($this->__DOM);$i++){
-			for($j = 0;$j < count($this->__DOM[$i]);$j++){
-				if($this->__DOM[$i][$j]['tag'] == '__TEXT'){
-					array_push($result, $this->__DOM[$i][$j][0]);
+		$this->__ELEMENT_DOM = $this->one_dom($this->__ELEMENT_DOM);
+		return $this->__ELEMENT_DOM;
+		if(isset($this->__ELEMENT_DOM['tag'])){
+			if($this->__ELEMENT_DOM['tag'] == '__TEXT'){
+				return $this->__ELEMENT_DOM[0];
+			}
+		}else{
+			for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
+				if($this->__ELEMENT_DOM[$i]['tag'] == '__TEXT'){
+					array_push($result, $this->__ELEMENT_DOM[$i][0]);
 				}
 			}
 		}
@@ -650,6 +655,7 @@ class Element{
 
 	public function children(int $number){
 		$result = [];
+		$this->__ELEMENT_DOM = $this->one_dom($this->__ELEMENT_DOM);
 		array_push($result, $this->__ELEMENT_DOM[$number]);
 		return new Children($result);
 	}
@@ -682,11 +688,15 @@ Class Children{
 
 	public function plainText(){
 		$result = [];
-		if($this->__DOM['tag']) return $this->__DOM[0];
-		for($i = 0;$i < count($this->__DOM);$i++){
-			for($j = 0;$j < count($this->__DOM[$i]);$j++){
-				if($this->__DOM[$i][$j]['tag'] == '__TEXT'){
-					array_push($result, $this->__DOM[$i][$j][0]);
+		$this->__DOM = $this->one_dom($this->__DOM);
+		if(isset($this->__DOM['tag'])){
+			if($this->__DOM['tag'] == '__TEXT'){
+				return $this->__DOM[0];
+			}
+		}else{
+			for($i = 0;$i < count($this->__DOM);$i++){
+				if($this->__DOM[$i]['tag'] == '__TEXT'){
+					array_push($result, $this->__DOM[$i][0]);
 				}
 			}
 		}
@@ -699,7 +709,6 @@ Class Children{
 		while(count($is_empty_dom) <= 1 && !$is_empty_dom['tag']){
 			$is_empty_dom = $is_empty_dom[0];
 		}
-		print_r(count($is_empty_dom));
 		return $is_empty_dom;
 	}
 }
