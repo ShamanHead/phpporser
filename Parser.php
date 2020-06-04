@@ -2,7 +2,7 @@
 
 /*						  
 	Copyright© Arseniy Romanovskiy aka ShamanHead     
-	This file is part of Telbot package		  
+	This file is part of Phporser package		  
 	Created by ShamanHead				  
 	Mail: arsenii.romanovskii85@gmail.com	     	  						  
 */
