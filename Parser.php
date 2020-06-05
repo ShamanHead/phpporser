@@ -16,9 +16,6 @@ class Dom{
 	private $__ENABLE_COMMENTS = false;
     private $__ESCAPE_CLOSING_TAGS = false;
     private $__ESCAPE_SYMBOLS = ["\n"," ", "\t", "\e", "\f", "\v", "\r"];
-    private $__RECURTION_INPUTS = 0;
-    private $__RECURTION_ERROR_OUTPUT = false;
-    private $__DEBUG_MODE = false;
 
 	function __construct($url, $enable_comments = false){
 		if($enable_comments){
@@ -233,7 +230,7 @@ class Dom{
 					$closed_tag = true;
 					break;
 				}
-				if(($state == 'tag' || $state == 'attribute') && $this->is_singleton($this->escape_symbols($this->__ESCAPE_SYMBOLS, $tag)) ){
+				if(($state == 'tag' || $state == 'attribute') && $this->is_singleton($tag) ){
 				 $result['is_singleton'] = true;
 				}
 				break;
@@ -323,11 +320,8 @@ class Dom{
 	private function node(string $html, int $f_pointer = 0) : array {
 				$lenght = strlen($html);
 
-				$result;
 				$stack = [];
-				$level = 0;
 				$text='';
-				$text_stack = [];
 				$ignore_html = false;
 
 				for($i = 0;$i < $lenght;$i++){
@@ -354,6 +348,8 @@ class Dom{
 							throw new \Exception($temporary_tag[0]);
 						}
 						if(($temporary_tag['tag'] == 'script' || $temporary_tag['tag'] == 'style') && $temporary_tag['is_closing'] == 0){
+							$stack[] = ['tag' => '__TEXT',$text];
+							$text = '';
 							$ignore_html = true;
 						}else if(($temporary_tag['tag'] == 'script' || $temporary_tag['tag'] == 'style') && $temporary_tag['is_closing'] == 1){
 							$ignore_html = false;
@@ -364,10 +360,10 @@ class Dom{
 							}else{
 								if(($temporary_tag['tag'] != 'script') && ($temporary_tag['tag'] != 'style')){
 									if($this->escape_symbols($this->__ESCAPE_SYMBOLS, $text)){
-										$stack[] = ['tag' => '__TEXT',htmlspecialchars($text)];
+										$stack[] = ['tag' => '__TEXT',$text];
 										$text = '';
 									}else if($this->escape_symbols($this->__ESCAPE_SYMBOLS, $text) == '0'){
-										$stack[] = ['tag' => '__TEXT',htmlspecialchars($text)];
+										$stack[] = ['tag' => '__TEXT',$text];
 										$text = '';
 									}
 									$stack[] = $temporary_tag;
