@@ -1,10 +1,10 @@
 <?php
 
-/*						  
-	Copyright© Arseniy Romanovskiy aka ShamanHead     
-	This file is part of Phporser package		  
-	Created by ShamanHead				  
-	Mail: arsenii.romanovskii85@gmail.com	     	  						  
+/*
+	Copyright© Arseniy Romanovskiy aka ShamanHead
+	This file is part of Phporser package
+	Created by ShamanHead
+	Mail: arsenii.romanovskii85@gmail.com
 */
 
 namespace Parser;
@@ -16,6 +16,7 @@ class Dom{
 	private $__ENABLE_COMMENTS = false;
     private $__ESCAPE_CLOSING_TAGS = false;
     private $__ESCAPE_SYMBOLS = ["\n"," ", "\t", "\e", "\f", "\v", "\r"];
+  	private $__OMMISION_TAGS = ["tr", "td", "li"];
 
 	function __construct($url, $enable_comments = false){
 		if($enable_comments){
@@ -75,42 +76,65 @@ class Dom{
 			return $result;
 	}
 
+	private function ommited_tag($tag, $stack, $position){
+		$finded = false;
+      for($i = 0;$i < count($this->__OMMISION_TAGS);$i++){
+        if(strcasecmp($tag,$this->__OMMISION_TAGS[$i]) == 0){
+          $finded = true;
+        }
+      }
+      if(!$finded){
+      	return false;
+      }
+      	for($i = $position+1;$i < count($stack);$i++){
+      		if($stack[$i]['tag'] != '__COMMENT'){
+      			if(($stack[$i]['tag'] == $tag && !$stack[$i]['is_closing']) || $stack[$i]['is_closing']){
+			   		return true;
+			    }else{
+			      	return false;
+			    }	
+      		}
+      	}
+    }
+
 	private function stack_recurtion(array $stack, int $pointer, array $main_tag = [], array $open_tags = []){
 				$result = [];
 				for($i = $pointer;$i < count($stack);$i++){
-					$current_tag = $stack[$i];
-					if((!$current_tag['is_singleton']) && (!$current_tag['is_closing']) && ($current_tag['tag'] != '__TEXT' && $current_tag['tag'] != '__COMMENT')){
+					$current_token = $stack[$i];
+					if((!$current_token['is_singleton']) && (!$current_token['is_closing']) && ($current_token['tag'] != '__TEXT' && $current_token['tag'] != '__COMMENT')){
+						if(!$this->ommited_tag($current_token['tag'], $stack, $i)){
+							$point = $this->recurtion_tag_tracker($open_tags, $current_token['tag']);
+							if(!$open_tags[$point]){
+								$open_tags[$point]['tag'] = $current_token['tag'];
+								$open_tags[$point]['count'] = 1;
+							}else{
+								$open_tags[$point]['count']++;
+							}
 
-						$point = $this->node_tag_tracker($open_tags, $current_tag['tag']);
-						if(!$open_tags[$point]){
-							$open_tags[$point]['tag'] = $current_tag['tag'];
-							$open_tags[$point]['count'] = 1;
-						}else{
-							$open_tags[$point]['count']++;
-						}
+							$depended_tokens = $this->stack_recurtion($stack, $i+1, $current_token, $open_tags);
+							$open_tags = $depended_tokens[2];
 
-						$dependend_tags = $this->stack_recurtion($stack, $i+1, $current_tag, $open_tags);
-						$open_tags = $dependend_tags[2];
+							array_push($current_token, $depended_tokens[0]);
+							array_push($result,$current_token);
 
-						array_push($current_tag, $dependend_tags[0]);
-						array_push($result,$current_tag);
-
-						$this->__RECURTION_INPUTS++;
-						$i = $dependend_tags[1];
+							$i = $depended_tokens[1];
+	                        }else{
+	                          $result[] = $current_token;
+	                        }
 					}
 
-					if($current_tag['tag'] == '__TEXT' || $current_tag['tag'] == '__COMMENT'){
-						$result[] = $current_tag;
+					if($current_token['tag'] == '__TEXT' || $current_token['tag'] == '__COMMENT'){
+						$result[] = $current_token;
 					}
-					if($current_tag['is_singleton']){
-						array_push($result, $current_tag);
-					}else if($current_tag['is_closing']){
-					  if($main_tag['tag'] != $current_tag['tag']){
+					if($current_token['is_singleton']){
+						array_push($result, $current_token);
+					}else if($current_token['is_closing']){
+					  if($main_tag['tag'] != $current_token['tag']){
 					  	$finded = false;
 						  	for($h = 0;$h < count($open_tags);$h++){
 						  		if($open_tags[$h]['count'] > 0 && $open_tags[$h]['tag'] == $main_tag['tag']){
 						  			for($z = 0;$z < count($open_tags);$z++){
-						  				if($open_tags[$z]['count'] > 0 && $open_tags[$z]['tag'] == $current_tag['tag']){
+						  				if($open_tags[$z]['count'] > 0 && $open_tags[$z]['tag'] == $current_token['tag']){
 						  					$finded = $h;
 						  				}
 						  			}
@@ -129,8 +153,8 @@ class Dom{
 					  			continue;
 					  		}
 					  }
-                      array_push($result, $current_tag);
-                      $point = $this->node_tag_tracker($open_tags, $current_tag['tag']);
+                      array_push($result, $current_token);
+                      $point = $this->recurtion_tag_tracker($open_tags, $current_token['tag']);
                       $open_tags[$point]['count']--;
 						return [$result, $i, $open_tags];
 					}
@@ -187,7 +211,7 @@ class Dom{
 						$state = 'attribute';
 					}else{
 						$value .= $html[$i];
-					}				
+					}
 				}else if($state == 'attribute' && $attribute != false){
 					$symbol = $html[$this->space_jitter($i, $html)];
 					if($symbol == '='){
@@ -340,25 +364,25 @@ class Dom{
 							$i = $comment[0]-1;
 							continue;
 						}
-						$temporary_tag = $this->read_tag($html, $i);
-						if($temporary_tag['error_code'] && $ignore_html){
+						$temporary_token = $this->read_tag($html, $i);
+						if($temporary_token['error_code'] && $ignore_html){
 							continue;
 						}else
-						if($temporary_tag['error_code'] && !$ignore_html){
-							throw new \Exception($temporary_tag[0]);
+						if($temporary_token['error_code'] && !$ignore_html){
+							throw new \Exception($temporary_token[0]);
 						}
-						if(($temporary_tag['tag'] == 'script' || $temporary_tag['tag'] == 'style') && $temporary_tag['is_closing'] == 0){
+						if(($temporary_token['tag'] == 'script' || $temporary_token['tag'] == 'style') && $temporary_token['is_closing'] == 0){
 							$stack[] = ['tag' => '__TEXT',$text];
 							$text = '';
 							$ignore_html = true;
-						}else if(($temporary_tag['tag'] == 'script' || $temporary_tag['tag'] == 'style') && $temporary_tag['is_closing'] == 1){
+						}else if(($temporary_token['tag'] == 'script' || $temporary_token['tag'] == 'style') && $temporary_token['is_closing'] == 1){
 							$ignore_html = false;
 						}
 						if($ignore_html == false){
-							if($temporary_tag['is_singleton']){
-								$stack[] = $temporary_tag;
+							if($temporary_token['is_singleton']){
+								$stack[] = $temporary_token;
 							}else{
-								if(($temporary_tag['tag'] != 'script') && ($temporary_tag['tag'] != 'style')){
+								if(($temporary_token['tag'] != 'script') && ($temporary_token['tag'] != 'style')){
 									if($this->escape_symbols($this->__ESCAPE_SYMBOLS, $text)){
 										$stack[] = ['tag' => '__TEXT',$text];
 										$text = '';
@@ -366,23 +390,19 @@ class Dom{
 										$stack[] = ['tag' => '__TEXT',$text];
 										$text = '';
 									}
-									$stack[] = $temporary_tag;
+									$stack[] = $temporary_token;
 								}else{
 									$text = '';
 								}
 							}
 
-							$i = $temporary_tag['pointer']-1;
+							$i = $temporary_token['pointer']-1;
 						}
 					}else{
 						$text .= $html[$i];
 					}
 				}
-				if($this->__DEBUG_MODE){
-					return $stack;
-				}else{
-					return $this->stack_recurtion($stack, 0);
-				}
+				return $this->stack_recurtion($stack, 0);
 			}
 
 	private function pars(string $html){
@@ -400,7 +420,7 @@ class Dom{
 		return true;
 	}
 
-	public function node_tag_tracker($array ,string $tag){
+	public function recurtion_tag_tracker($array ,string $tag){
 		for($i = 0;$i < count($array);$i++){
 			if($array[$i]['tag'] == $tag){
 				return $i;
@@ -459,7 +479,7 @@ class Element{
 			break;
 			default:
 				$this->__ELEMENT_TYPE = 'tag';
-			break;	
+			break;
 		}
 		$this->__ELEMENT_DOM = $this->parsDom($this->__DOM, $number)[0];
 		print_r($this->parsDom($this->__DOM, $number)[1].' ');
@@ -697,5 +717,3 @@ Class Children{
 		return $is_empty_dom;
 	}
 }
-
-?>
