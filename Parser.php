@@ -15,8 +15,7 @@ class Dom{
 	private $__DOM;
 	private $__ENABLE_COMMENTS = false;
     private $__ESCAPE_SYMBOLS = ["\n"," ", "\t", "\e", "\f", "\v", "\r"];
-    private $__HTML = '';
-    private $__MANDATORY_OPEN_ELEMETS= [false, false, false]; //html, head, body
+    private $__MANDATORY_OPEN_ELEMETS= [false, false, false]; //html, head, body, tbody
     private $__MANDATORY_CLOSE_ELEMETS= [false, false, false]; //html, head, body
     public $__ERRORS = [];
 
@@ -436,6 +435,7 @@ class Dom{
 				$stack = $this->ommited_mandatory_tags($stack);
 				$stack = $this->ommited_close_tags($stack);
 				// $this->stack_recurtion($stack, 0);
+				// return $this->stack_recurtion($stack, 0);
 				return $this->stack_recurtion($stack, 0);
 			}
 
@@ -487,39 +487,88 @@ class Dom{
 		if($this->__MANDATORY_CLOSE_ELEMETS[2] == false){
 			array_splice($stack, count($stack)-1, 0, [['tag' => 'body', 'is_closing' => true]]);
 		}
+		for($i = 0;$i < count($stack);$i++){
+			if($stack[$i]['tag'] == 'table'){
+				for($j = $i+1;$j < count($stack);$j++){
+					if($stack[$j]['tag'] == 'table' && $stack[$j]['is_closing']){
+						$i = $j;
+						break;
+					}
+					if($stack[$j]['tag'] == 'tbody') break;
+					if($stack[$j]['tag'] == 'tr'){
+						array_splice($stack, $j, 0, [['tag' => 'tbody', 'is_closing' => false]]);
+						$i = $j;
+						break;
+					}
+				}
+			}
+		}
 		return $stack;
 	}
 
 	function ommited_close_tags($stack, $pointer = 0, $has_caused = false){
 		$ommited_tags_list = [
 			['li', ['li'], ['ul', 'ol']],
-			['dd', ['dt', 'dd'], ['dl']]
+			['dt', ['dd', 'dt'], ['dl']],
+			['dd', ['dt', 'dd'], ['dl']],
+			['rt', ['rt', 'rp'], ['rtc']],
+			['optgroup', ['optgroup']],
+			['option', ['option', 'optgroup']],
+			['tr', ['tr']],
+			['td', ['td','th']],
+			['th', ['th','td']],
+			['thead', ['thead','tbody', 'tfoot']],
+			['tbody', ['tbody','tfoot']],
+			['tfoot', ['tfoot','table']],
+			['a', ['a']]	
 		];
 		$tag_number = 0;
 		for($i = $pointer; $i < count($stack);$i++){
+			if($stack[$i]['tag'] == 'caption' || $stack[$i]['tag'] == 'colgroup'){
+				$tag = $stack[$i]['tag'];
+				for($j = $i+1; $j < count($stack);$j++){
+					if($stack[$j]['tag'] == '__TEXT' || $stack[$j]['tag'] == '__COMMENT') continue;
+					if($stack[$j]['tag'] == $tag && $stack[$j]['is_closing']) continue;
+					if($tag == 'colgroup' && $stack[$j]['tag'] == 'col') continue;
+					if($stack[$j]['tag'] != $tag){
+						array_splice($stack, $j, 0, [['tag' => $tag , 'is_closing' => 1]]);
+						$i = $j;
+						break;
+					}
+					if($stack[$j]['tag'] == $tag && !$stack[$j]['is_closing']) {
+						array_splice($stack, $j, 0, [['tag' => $tag , 'is_closing' => 1]]);
+						$i = $j;
+						break;
+					}
+				}
+			}
 			if($has_caused){
 				for($x = 0;$x < count($ommited_tags_list);$x++){
 					for($c = 0;$c < count($ommited_tags_list[$x][2]);$c++){
 						if($stack[$i]['tag'] == $ommited_tags_list[$x][2][$c]){
 							$first_time = false;
+							$tag = '';
 							for($j = $i+1;$j < count($stack);$j++){
 								for($z = 0;$z < count($ommited_tags_list[$x][1]);$z++){
-									if($stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && $stack[$j]['is_closing']){ $first_time = false;}
 									if($stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && !$stack[$j]['is_closing'] && $first_time){
-											array_splice($stack, $j, 0, [['tag' => $ommited_tags_list[$x][1][$z] , 'is_closing' => 1]]);
-											$first_time = false;
-										}else if($first_time == false && $stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && !$stack[$j]['is_closing']){
-											$first_time = true;
-										
-										}
+										array_splice($stack, $j, 0, [['tag' => $tag , 'is_closing' => 1]]);
+										$first_time = false;
+									}else if($first_time == false && $stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && !$stack[$j]['is_closing']){
+										$first_time = true;
+										$tag = $ommited_tags_list[$x][1][$z];
+									}
+									if($stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && $stack[$j]['is_closing'] && $first_time){ $first_time = false;}else
+									if($stack[$j]['tag'] == $ommited_tags_list[$x][1][$z] && $stack[$j]['is_closing'] && !$first_time){array_splice($stack, $j, 1);
+									}
 									if(!$stack[$j]['is_closing'] && $stack[$j]['tag'] == $ommited_tags_list[$x][2][$c]){
 										$ul = $this->ommited_close_tags($stack, $j, true);
+										if(!isset($ul[1])) return $stack;
 										$stack = $ul[0];
 										$j = $ul[1];
+									}if($stack[$j]['is_closing'] && $stack[$j]['tag'] == $ommited_tags_list[$x][2][$c]){
+										return [$stack, $j];
 									}
-									if($stack[$j]['is_closing'] && $stack[$j]['tag'] == $ommited_tags_list[$x][2][$c]){
-										return [$stack, $j+1];
-									}
+
 								}
 							}
 						}
@@ -528,12 +577,13 @@ class Dom{
 			}else{
 				for($k = 0;$k < count($ommited_tags_list);$k++){
 					if($ommited_tags_list[$k][0] == $stack[$i]['tag']){
-						$open_tags = [];
 						$first_time = false;
+						$tag = '';
 						for($j = $i;$j < count($stack);$j++){
 							for($h = 0;$h < count($ommited_tags_list[$k][2]);$h++){
 								if($ommited_tags_list[$k][2][$h] == $stack[$j]['tag'] && !$stack[$j]['is_closing']){
 									$ul = $this->ommited_close_tags($stack, $j, true);
+									if(!isset($ul[1])) return $stack;
 									$stack = $ul[0];
 									$j = $ul[1];
 									break;
@@ -542,10 +592,11 @@ class Dom{
 							for($z = 0;$z < count($ommited_tags_list[$k][1]);$z++){
 								if($stack[$j]['tag'] == $ommited_tags_list[$k][1][$z] && $stack[$j]['is_closing']){ $first_time = false;}
 								if($stack[$j]['tag'] == $ommited_tags_list[$k][1][$z] && !$stack[$j]['is_closing'] && $first_time){
-									array_splice($stack, $j, 0, [['tag' => $ommited_tags_list[$k][1][$z] , 'is_closing' => 1]]);
+									array_splice($stack, $j, 0, [['tag' => $tag , 'is_closing' => 1]]);
 									$first_time = false;
 								}else if($first_time == false && $stack[$j]['tag'] == $ommited_tags_list[$k][1][$z] && !$stack[$j]['is_closing']){
 									$first_time = true;
+									$tag = $ommited_tags_list[$k][1][$z];
 								}
 							}
 						}
