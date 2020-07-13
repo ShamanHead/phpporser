@@ -15,7 +15,7 @@ class Dom{
 	private $__DOM;
 	private $__ENABLE_COMMENTS = false;
     private $__ESCAPE_SYMBOLS = ["\n"," ", "\t", "\e", "\f", "\v", "\r"];
-    private $__MANDATORY_OPEN_ELEMETS= [false, false, false]; //html, head, body, tbody
+    private $__MANDATORY_OPEN_ELEMETS= [false, false, false]; //html, head, body
     private $__MANDATORY_CLOSE_ELEMETS= [false, false, false]; //html, head, body
     public $__ERRORS = [];
 
@@ -489,16 +489,23 @@ class Dom{
 		}
 		for($i = 0;$i < count($stack);$i++){
 			if($stack[$i]['tag'] == 'table'){
+				$colgroup = false;
+				$tbody = false;
 				for($j = $i+1;$j < count($stack);$j++){
+					if($stack[$j]['tag'] == 'col' && !$colgroup){
+						array_splice($stack, $j, 0, [['tag' => 'colgroup', 'is_closing' => false]]);
+						$colgroup = true;
+					}
 					if($stack[$j]['tag'] == 'table' && $stack[$j]['is_closing']){
 						$i = $j;
 						break;
 					}
 					if($stack[$j]['tag'] == 'tbody') break;
-					if($stack[$j]['tag'] == 'tr'){
+					if($stack[$j]['tag'] == 'tr' && !$tbody){
 						array_splice($stack, $j, 0, [['tag' => 'tbody', 'is_closing' => false]]);
+						$tbody = true;
 						$i = $j;
-						break;
+						continue;
 					}
 				}
 			}
