@@ -768,18 +768,19 @@ public function ommited_mandatory_tags($stack){
 
 	private function query(string $url, $headers): string {
 		$curlSession = curl_init();
-		if(gettype($headers) == 'array'){
-			for($i = 0;$i < count($headers);$i++){
-				curl_setopt($curlSession, $headers[$i][0], $headers[$i][1]);
-			}
-		}
 
 	    curl_setopt($curlSession, CURLOPT_HEADER, 0);
 	    curl_setopt($curlSession, CURLOPT_RETURNTRANSFER, 1);
 	    curl_setopt($curlSession, CURLOPT_URL, $url);
+			// curl_setopt($curlSession, CURLOPT_COOKIES, '_ym_uid=1604935194958224120; _ym_d=1604935194; _ga=GA1.2.2145532331.1604935195; _gid=GA1.2.807129149.1604935195; subscription__price=group_6; sessid=9ab2256dae51dd790127a1cdf0bab4d6; screen_for_ad=tablet; _ym_isad=2; _ym_visorc_39561835=b; _ym_visorc_26812653=b; __gads=ID=1838d0e1fe0a0f31-2231fd402fb90007:T=1605114304:RT=1605114304:S=ALNI_MYvYd2Xe8YxLs7drf1GSyGtKH7KxA; _gat=1');
 	    curl_setopt($curlSession, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13) Gecko/20080311 Firefox/2.0.0.13');
 	    curl_setopt($curlSession, CURLOPT_FOLLOWLOCATION, TRUE);
 	    curl_setopt($curlSession, CURLOPT_HTTPHEADER, array("Content-Type:multipart/form-data"));
+			if(gettype($headers) == 'array'){
+				for($i = 0;$i < count($headers);$i++){
+					curl_setopt($curlSession, $headers[$i][0], $headers[$i][1]);
+				}
+			}
 	    $returningData = curl_exec($curlSession);
 	    curl_close($curlSession);
 
@@ -965,7 +966,8 @@ class Element{
 		return new Element([$this->__ELEMENT_DOM], $element, $number);
 	}
 
-	private function one_dom(array $dom){
+	private function one_dom($dom){
+		if(gettype($dom) != 'array') return $dom;
 		$is_empty = true;
 		$is_empty_dom = $dom;
 		while(count($is_empty_dom) <= 1 && !$is_empty_dom['tag']){
@@ -977,18 +979,21 @@ class Element{
 	public function children(int $number){
 		@$result = [];
 		$contents = [];
+		$count = 0;
 		$this->__ELEMENT_DOM = $this->__ELEMENT_DOM;
 		if($this->__ELEMENT_DOM[$number]['tag'] != "__TEXT" && $this->__ELEMENT_DOM[$number]['tag'] != "__COMMENT" && !$this->__ELEMENT_DOM[$number]['is_singleton']){
-			array_push($result, $this->__ELEMENT_DOM[$number][0]);
+			array_push($result, $this->__ELEMENT_DOM[$number]);
+			$count+=count($this->one_dom($this->__ELEMENT_DOM[$number][0]));
 			for($j = 0, $keys = array_keys($this->__ELEMENT_DOM[$number]);$j < count($keys);$j++){
 				if($keys[$j] !== 0){
 					$contents[$keys[$j]] = $this->__ELEMENT_DOM[$number][$keys[$j]];
 				}
 			}
 		}else{
+			$count++;
 			array_push($result, $this->__ELEMENT_DOM[$number]);
 		}
-		return new Children($result, $contents, $this->__COUNT);
+		return new Children($result, $contents, $count);
 	}
 }
 
@@ -1141,8 +1146,8 @@ Class Children{
 		return $this->__ELEMENT_CONTENTS;
 	}
 
-	public function find(string $element){
-		return new Element($this->__DOM, $element);
+	public function find(string $element, $number = 0){
+		return new Element($this->__DOM, $element, $number);
 	}
 
 	public function viewDom(){
@@ -1152,17 +1157,20 @@ Class Children{
 	public function children(int $number) {
 		$result = [];
 		$contents = [];
+		$count = 0;
 		if(@$this->__DOM[$number]['tag'] != "__TEXT" && @$this->__DOM[$number]['tag'] != "__COMMENT" && @!$this->__DOM[$number]['is_singleton']){
-			array_push($result, $this->__DOM[$number][0]);
-			for($j = 0, $keys = array_keys($this->_DOM[0][$number]);$j < count($keys);$j++){
+			array_push($result, $this->__DOM[$number]);
+			$count+=count($this->one_dom($this->__DOM[$number]));
+			for($j = 0, $keys = array_keys($this->_DOM[$number]);$j < count($keys);$j++){
 				if($keys[$j] !== 0){
-					$contents[$keys[$j]] = $this->_DOM[0][$number][$keys[$j]];
+					$contents[$keys[$j]] = $this->_DOM[$number][$keys[$j]];
 				}
 			}
 		}else{
 			array_push($result, $this->__DOM[$number]);
+			$count++;
 		}
-		return new Children($result, $contents);
+		return new Children($result, $contents, $count);
 	}
 
 	public function plainText(){
@@ -1180,10 +1188,13 @@ Class Children{
 		return new DomText($result);
 	}
 
-	private function one_dom(array $dom){
+	private function one_dom($dom){
+		if(gettype($dom) != 'array') return $dom;
+		if($dom['tag']) return $dom;
 		$is_empty = true;
 		$is_empty_dom = $dom;
 		while(@count($is_empty_dom) <= 1 && @!$is_empty_dom['tag']){
+			if($is_empty_dom[0] == NULL) return $is_empty_dom;
 			$is_empty_dom = $is_empty_dom[0];
 		}
 		return $is_empty_dom;
