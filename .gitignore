@@ -1,0 +1,20 @@
+.idea
+_trash
+
+
+# Linux
+*~
+*.swp
+.user.ini
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Mac OS X
+.DS_Store
+._*
+
+# Composer
+/composer.phar
+/vendor

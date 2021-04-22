@@ -1,0 +1,15 @@
+{
+    "name": "shamanhead/phpporser",
+    "type": "library",
+    "description": "Advanced parser for advanced tasks",
+    "keywords": ["php","pars","parsing","library","package"],
+    "homepage": "https://packagist.org/packages/shamanhead/php-logger",
+    "license": "AGPL-3.0-or-later",
+    "minimum-stability": "stable",
+     "require": {
+        "php": ">=7.2"
+    },
+    "autoload": {
+        "classmap": ["app/"]
+    }
+}
