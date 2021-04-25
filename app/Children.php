@@ -7,7 +7,7 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser\App;
+namespace ShamanHead\PhpPorser;
 
 Class Children{
 	private $__DOM = [];

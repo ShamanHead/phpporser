@@ -7,11 +7,19 @@ namespace Composer\Autoload;
 class ComposerStaticInit9ac67348c41601b204b2f48694febc0c
 {
     public static $classMap = array (
-        'ShamanHead\\PhpPorser\\App\\Analyzer' => __DIR__ . '/../..' . '/app/Analyzer.php',
-        'ShamanHead\\PhpPorser\\App\\Children' => __DIR__ . '/../..' . '/app/Children.php',
-        'ShamanHead\\PhpPorser\\App\\Dom' => __DIR__ . '/../..' . '/app/Dom.php',
-        'ShamanHead\\PhpPorser\\App\\DomText' => __DIR__ . '/../..' . '/app/DomText.php',
-        'ShamanHead\\PhpPorser\\App\\Element' => __DIR__ . '/../..' . '/app/Element.php',
+        'ShamanHead\\PhpLogger\\ArrayLogger' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/Logger/ArrayLogger.php',
+        'ShamanHead\\PhpLogger\\Config' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/Static/Config.php',
+        'ShamanHead\\PhpLogger\\FileLogger' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/Logger/FileLogger.php',
+        'ShamanHead\\PhpLogger\\Log' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/Log.php',
+        'ShamanHead\\PhpLogger\\Logger' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/Logger/Logger.php',
+        'ShamanHead\\PhpLogger\\LoggerFactory' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Factory/LoggerFactory.php',
+        'ShamanHead\\PhpLogger\\PrefixTable' => __DIR__ . '/..' . '/shamanhead/php-logger/app/Entity/PrefixTable.php',
+        'ShamanHead\\PhpPorser\\Analyzer' => __DIR__ . '/../..' . '/app/Analyzer.php',
+        'ShamanHead\\PhpPorser\\App\\Lexer' => __DIR__ . '/../..' . '/app/Lexer/Lexer.php',
+        'ShamanHead\\PhpPorser\\Children' => __DIR__ . '/../..' . '/app/Children.php',
+        'ShamanHead\\PhpPorser\\Dom' => __DIR__ . '/../..' . '/app/Dom.php',
+        'ShamanHead\\PhpPorser\\DomText' => __DIR__ . '/../..' . '/app/DomText.php',
+        'ShamanHead\\PhpPorser\\Element' => __DIR__ . '/../..' . '/app/Element.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
