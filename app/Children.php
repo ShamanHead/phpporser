@@ -7,7 +7,7 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser;
+namespace ShamanHead\PhpPorser\App;
 
 Class Children{
 	private $__DOM = [];
@@ -24,26 +24,86 @@ Class Children{
 		}
 	}
 
-	public function findAllText($dom = false){
+	public function findAllText($returnParent = false,$dom = false, $parent = false){
 		if(!$dom) $dom = $this->oneDom($this->__DOM);
 		$result = [];
 		for($i = 0;$i < count($dom);$i++){
 			if(isset($dom[$i]['tag']) && $dom[$i]['tag'] == '__TEXT'){
-				array_push($result, $dom[$i][0]);
-			}else if(isset($dom[$i]['tag']) && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']){
-				$obj = $this->findAllText($dom[$i]);
+				array_push($result, ($returnParent ? [$parent,$dom[$i][0]] : $dom[$i][0]));
+			}else if(isset($dom[$i]['tag'])  && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']){
+				$obj = $this->findAllText($returnParent, $dom[$i], $dom[$i]);
 				for($j = 0;$j < count($obj);$j++){
 					$result[] = $obj[$j];
 				}
 			}else if(!isset($dom[$i]['tag']) && isset($dom[$i][0])){
-				$obj = $this->findAllText($dom[$i]);
+				$obj = $this->findAllText($returnParent, $dom[$i], ($returnParent ?  array_diff_key($parent, [0]) : false));
 				for($j = 0;$j < count($obj);$j++){
 					$result[] = $obj[$j];
 				}
 			}
 		}
 		return $result;
+	}
 
+	public function safeHTML($dom = false, int $level = 0) : string{
+		$result = '';
+		if($dom === false){
+			$dom = $this->oneDom($this->__DOM);
+		}
+		$dom = $this->oneDom($dom);
+		for($i = 0;$i < count($dom);$i++){
+			if(isset($dom[$i]['tag']) && ($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT')){
+				$result .= str_repeat("\t", $level).$dom[$i][0]."\n";
+				continue;
+			}
+			$properties = '';
+			for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
+				if($keys[$j] === 'class' || $keys[$j] === 'id'){
+					for($u = 0;$u < count($dom[$i][$keys[$j]]);$u++){
+						if($u == count($dom[$i][$keys[$j]])-1){
+							$ficators .= $dom[$i][$keys[$j]][$u];
+							continue;
+						}
+						$ficators .= $dom[$i][$keys[$j]][$u].', ';
+					}
+					$properties .= " ".$keys[$j].'=\''.$ficators.'\' ';
+				}
+
+				if($keys[$j] !== 0 && $keys[$j] !== 'pointer' && $keys[$j] !== 'is_singleton' && $keys[$j] !== 'is_closing' && $keys[$j] !== 'tag' && $keys[$j] !== 'class' && $keys[$j] !== 'id'){
+					if($dom[$i][$keys[$j]] === true){
+						$properties .= " $keys[$j]";
+						continue;
+					}
+					$founded = false;
+					for($z = 0;$z < strlen($dom[$i][$keys[$j]]);$z++){
+						if($dom[$i][$keys[$j]][$z] == '"'){
+							$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
+							$founded = true;
+							break;
+						}
+						if($dom[$i][$keys[$j]][$z] == "'"){
+							$properties .= " $keys[$j]=\"".$dom[$i][$keys[$j]]."\"";
+							$founded = true;
+							break;
+						}
+					}
+					if($founded == false){
+						$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
+					}
+				}
+			}
+			if(!empty($dom[$i][0])){
+				$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
+				$result .= $this->safeHTML($dom[$i][0], $level+1);
+			}else{
+				if(isset($dom[$i]['is_singleton']) && $dom[$i]['is_singleton'] == true){
+					$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
+				}else if(isset($dom[$i]['is_singleton'])){
+					$result .= str_repeat("\t", $level ? $level-1 : $level)."</".$dom[$i]['tag'].">\n";
+				}
+			}
+		}
+		return $result;
 	}
 
 	public function contents(){
@@ -62,17 +122,17 @@ Class Children{
 		$result = [];
 		$contents = [];
 		$count = 0;
-		if($this->__DOM[$number]['tag'] != "__TEXT" && $this->__DOM[$number]['tag'] != "__COMMENT" && !$this->__DOM[$number]['is_singleton']){
+		if((isset($this->__DOM[$number]['tag']) && $this->__DOM[$number]['tag'] != "__TEXT" && $this->__DOM[$number]['tag'] != "__COMMENT") && empty($this->__DOM[$number]['is_singleton'])){
 			array_push($result, $this->__DOM[$number]);
-			$count+=count($this->oneDom($this->__DOM[$number]));
-			for($j = 0, $keys = array_keys($this->_DOM[$number]);$j < count($keys);$j++){
+			$count+=count($this->oneDom($this->__DOM[$number][0]));
+			for($j = 0, $keys = array_keys($this->__DOM[$number]);$j < count($keys);$j++){
 				if($keys[$j] !== 0){
-					$contents[$keys[$j]] = $this->_DOM[$number][$keys[$j]];
+					$contents[$keys[$j]] = $this->__DOM[$number][$keys[$j]];
 				}
 			}
 		}else{
-			array_push($result, $this->__DOM[$number]);
 			$count++;
+			array_push($result, $this->__DOM[$number]);
 		}
 		return new Children($result, $contents, $count);
 	}
@@ -94,11 +154,9 @@ Class Children{
 
 	private function oneDom($dom){
 		if(gettype($dom) != 'array') return $dom;
-		if($dom['tag']) return $dom;
 		$is_empty = true;
 		$is_empty_dom = $dom;
-		while(@count($is_empty_dom) <= 1 && @!$is_empty_dom['tag']){
-			if($is_empty_dom[0] == NULL) return $is_empty_dom;
+		while(!empty($is_empty_dom) && count($is_empty_dom) <= 1 && !isset($is_empty_dom['tag'])){
 			$is_empty_dom = $is_empty_dom[0];
 		}
 		return $is_empty_dom;

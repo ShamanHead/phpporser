@@ -7,7 +7,7 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser;
+namespace ShamanHead\PhpPorser\App;
 
 class Element{
 
@@ -163,7 +163,7 @@ class Element{
 									array_push($temporary_dom, $obj[0]);
 								}
 							}
-							if(!$obj[0]){
+							if(empty($obj[0])){
 								continue;
 							}
 						}
@@ -178,26 +178,25 @@ class Element{
 		return $this->__ELEMENT_DOM;
 	}
 
-	public function findAllText($dom = false){
+	public function findAllText($returnParent = false,$dom = false, $parent = false){
 		if(!$dom) $dom = $this->oneDom($this->__ELEMENT_DOM);
 		$result = [];
 		for($i = 0;$i < count($dom);$i++){
 			if(isset($dom[$i]['tag']) && $dom[$i]['tag'] == '__TEXT'){
-				array_push($result, $dom[$i][0]);
-			}else if(isset($dom[$i]['tag']) && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']){
-				$obj = $this->findAllText($dom[$i]);
+				array_push($result, ($returnParent ? [$parent,$dom[$i][0]] : $dom[$i][0]));
+			}else if(isset($dom[$i]['tag'])  && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']){
+				$obj = $this->findAllText($returnParent, $dom[$i], $dom[$i]);
 				for($j = 0;$j < count($obj);$j++){
 					$result[] = $obj[$j];
 				}
 			}else if(!isset($dom[$i]['tag']) && isset($dom[$i][0])){
-				$obj = $this->findAllText($dom[$i]);
+				$obj = $this->findAllText($returnParent, $dom[$i], ($returnParent ?  array_diff_key($parent, [0]) : false));
 				for($j = 0;$j < count($obj);$j++){
 					$result[] = $obj[$j];
 				}
 			}
 		}
 		return $result;
-
 	}
 
 	public function getElementType(){
@@ -239,7 +238,7 @@ class Element{
 		$result = [];
 		$contents = [];
 		$count = 0;
-		if($this->__ELEMENT_DOM[$number]['tag'] != "__TEXT" && $this->__ELEMENT_DOM[$number]['tag'] != "__COMMENT" && !$this->__ELEMENT_DOM[$number]['is_singleton']){
+		if((isset($this->__ELEMENT_DOM[$number]['tag']) && $this->__ELEMENT_DOM[$number]['tag'] != "__TEXT" && $this->__ELEMENT_DOM[$number]['tag'] != "__COMMENT") && empty($this->__ELEMENT_DOM[$number]['is_singleton'])){
 			array_push($result, $this->__ELEMENT_DOM[$number]);
 			$count+=count($this->oneDom($this->__ELEMENT_DOM[$number][0]));
 			for($j = 0, $keys = array_keys($this->__ELEMENT_DOM[$number]);$j < count($keys);$j++){
@@ -249,9 +248,88 @@ class Element{
 			}
 		}else{
 			$count++;
-			array_push($result, $this->__ELEMENT_DOM[$number]);
+			if(isset($this->__ELEMENT_DOM[$number])) array_push($result, $this->__ELEMENT_DOM[$number]);
 		}
 		return new Children($result, $contents, $count);
+	}
+
+	public function safeHTML($dom = false, int $level = 0) : string{
+		$result = '';
+		if($dom === false){
+			if(gettype($this->__ELEMENT_DOM) == 'array'){
+				$dom = $this->oneDom($this->__ELEMENT_DOM);
+			}else{
+				return true;
+			}
+		}
+		$dom = $this->oneDom($dom);
+		if(isset($dom['tag']) && isset($dom['is_singleton'])){
+			if(isset($dom['is_singleton']) && $dom['is_singleton'] == true){
+				$result .= str_repeat("\t", $level)."<".$dom['tag']."$properties>\n";
+			}else if(isset($dom['is_singleton'])){
+				$result .= str_repeat("\t", $level ? $level-1 : $level)."</".$dom['tag'].">\n";
+			}
+			return $result;
+		}else if(isset($dom['tag'])){
+			$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
+			$result .= $this->safeHTML($dom[$i][0], $level+1);
+		}
+		for($i = 0;$i < count($dom);$i++){
+			if(isset($dom[$i]['tag']) && ($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT')){
+				$result .= str_repeat("\t", $level).$dom[$i][0]."\n";
+				continue;
+			}
+			$properties = '';
+			if(!empty($dom[$i])){
+				$ficators = '';
+				for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
+					if($keys[$j] === 'class' || $keys[$j] === 'id'){
+						for($u = 0;$u < count($dom[$i][$keys[$j]]);$u++){
+							if($u == count($dom[$i][$keys[$j]])-1){
+								$ficators .= $dom[$i][$keys[$j]][$u];
+								continue;
+							}
+							$ficators .= $dom[$i][$keys[$j]][$u].', ';
+						}
+						$properties .= " ".$keys[$j].'=\''.$ficators.'\' ';
+					}
+
+					if($keys[$j] !== 0 && $keys[$j] !== 'pointer' && $keys[$j] !== 'is_singleton' && $keys[$j] !== 'is_closing' && $keys[$j] !== 'tag' && $keys[$j] !== 'class' && $keys[$j] !== 'id'){
+						if($dom[$i][$keys[$j]] === true){
+							$properties .= " $keys[$j]";
+							continue;
+						}
+						$founded = false;
+						for($z = 0;$z < strlen($dom[$i][$keys[$j]]);$z++){
+							if($dom[$i][$keys[$j]][$z] == '"'){
+								$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
+								$founded = true;
+								break;
+							}
+							if($dom[$i][$keys[$j]][$z] == "'"){
+								$properties .= " $keys[$j]=\"".$dom[$i][$keys[$j]]."\"";
+								$founded = true;
+								break;
+							}
+						}
+						if($founded == false){
+							$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
+						}
+					}
+				}
+			}
+			if(!empty($dom[$i][0]) && isset($dom[$i]['tag'])){
+				$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
+				$result .= $this->safeHTML($dom[$i][0], $level+1);
+			}else{
+				if(isset($dom[$i]['is_singleton']) && $dom[$i]['is_singleton'] == true){
+					$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
+				}else if(isset($dom[$i]['is_singleton'])){
+					$result .= str_repeat("\t", $level ? $level-1 : $level)."</".$dom[$i]['tag'].">\n";
+				}
+			}
+		}
+		return $result;
 	}
 }
 

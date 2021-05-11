@@ -7,16 +7,11 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser;
-
-require "vendor/autoload.php";
-
-use ShamanHead\PhpLogger\LoggerFactory as LoggerFactory;
-use ShamanHead\PhpLogger\PrefixTable as PrefixTable;
+namespace ShamanHead\PhpPorser\App;
 
 class Dom{
 
-	private $__SOURCE_TEXT = false;
+	public $__SOURCE_TEXT = false;
 	private $__DOM = false;
 	private $__ENABLE_STYLES_SCRIPTS = false;
 	private $__ENABLE_COMMENTS = false;
@@ -25,7 +20,6 @@ class Dom{
   private $__MANDATORY_CLOSE_ELEMENTS= [false, false, false];
   private $__ERRORS = [];
 	private $__HREF = "";
-	private $__LOG = [];
 	private $__HEADERS = [
 		[CURLOPT_HEADER, 0],
 		[CURLOPT_RETURNTRANSFER, 1],
@@ -33,18 +27,6 @@ class Dom{
 		[CURLOPT_FOLLOWLOCATION, true],
 		[CURLOPT_HTTPHEADER, array("Content-Type:multipart/form-data")]
 	];
-
-	function __construct(){
-		$loggerFactory = new LoggerFactory;
-		$prefixTable = new PrefixTable;
-		$prefixTable->add('info', '[INFO]');
-		$prefixTable->add('lexer', '[LEX]');
-		$prefixTable->add('warning', '[WARN]');
-		$loggerFactory->setPrefixes($prefixTable);
-		$loggerFactory->setFlowType('file');
-		$loggerFactory->setFileName('test.log');
-		$this->__LOG = $loggerFactory->build();
-	}
 
 	public function setHref($href){
 		$this->__HREF = $href;
@@ -58,10 +40,6 @@ class Dom{
 		if($enable_comments){
 			$this->__ENABLE_COMMENTS = true;
 		}
-	}
-
-	public function getLog(){
-		return $this->__LOG;
 	}
 
 	public function enableStylesAndScripts(){
@@ -102,7 +80,6 @@ class Dom{
 						$this->__SOURCE_TEXT = file_get_contents($this->__HREF);
 					}
 				}
-				$this->__LOG->send('info', 'Start listening.');
 				$this->__DOM = $this->node($this->__SOURCE_TEXT)[0];
 			}
 		return $this->__DOM;
@@ -135,7 +112,7 @@ class Dom{
 
 	*/
 	private function isSingleton(string $tag) : bool{
-			$non_close_tags = ['area','base','basefont','bgsound','br','hr','col','command','embed','img','input','isindex','keygen','link','meta','param','source','track','wbr','!DOCTYPE', 'use', 'path', 'rect'];
+			$non_close_tags = ['area','base','basefont','bgsound','br','hr','col','command','embed','img','input','isindex','keygen','link','meta','param','source','track','wbr','!DOCTYPE', 'use', 'path'];
 			for($i = 0;$i < count($non_close_tags);$i++){
 				if(strcasecmp($this->escapeSymbols($this->__ESCAPE_SYMBOLS,$tag),$non_close_tags[$i]) == 0){
 					return true;
@@ -217,10 +194,10 @@ class Dom{
 			  			$open_tags[$finded]['count']--;
 			  			$splice_tag = ['tag' => $open_tags[$finded]['tag'], 'is_closing' => true];
 						array_splice($result, $i, 0, [$splice_tag]);
-						$this->__LOG->send('lexer', 'Missing tag <'.$current_token['tag'].'> at '.$current_token['pointer']);
+						array_push($this->__ERRORS, ['missing tag',$open_tags[$finded]['tag']]);
 						return [$result, $i-1, $open_tags];
 			  		}else{
-			  			$this->__LOG->send('lexer', 'Excess tag <'.$current_token['tag'].'> at '.$current_token['pointer']);
+			  			array_push($this->__ERRORS, ['excess tag',$current_token]);
 			  			continue;
 			  		}
 			  }
@@ -232,10 +209,6 @@ class Dom{
 
 		}
 		return [$result, $i, $open_tags];
-	}
-
-	private function getNearbyTags(array $stack, int $pointer){
-		return '<'.$stack[$i-3]['tag'].'>'.'<'.$stack[$i-2]['tag'].'>'.'<'.$stack[$i-1]['tag'].'>'.'<'.$stack[$i]['tag'].'>'.'<'.$stack[$i+1]['tag'].'>'.'<'.$stack[$i+2]['tag'].'>'.'<'.$stack[$i+3]['tag'].'>';
 	}
 
 	private function escapeComments($html, $position = 0){

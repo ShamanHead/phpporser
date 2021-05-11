@@ -17,28 +17,21 @@
 
 This php library contains an instrumentary to work with html document.You can work with dom and find elements and text.You can also get commentaries from dom, if you want.
 
-To create a Parser object you need to include this library into your project:
+To create a Parser object you need to include this library to your project:
 
 ```PHP
-require_once("vendor/autoload.php");
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-use ShamanHead\PhpPorser\Dom as Dom;
-
-$html = new Dom;
-$html->setHref("Href to your file or site");
-$html->dom(); //Start parsing
+$html = new Dom('url or href to file');
 
 ```
 
 You can look at the dom using this:
 
 ```PHP
-require_once("vendor/autoload.php");
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-use ShamanHead\PhpPorser\Dom as Dom;
-
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
 print_r($html->dom());
 
@@ -47,22 +40,20 @@ print_r($html->dom());
 You can also look source file code using this:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
-print_r($html->dump($filename)); //You can indicate file where will be writen dump file.
+print_r($html->dump(string $filename)); //You can indicate file where will be writen dump file.
 
 ```
 
 You can also look html that was finded by url:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
 echo $html->read();
 
@@ -77,10 +68,9 @@ echo $html->read();
 To find element, you can use those functions:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
 $html->find('elem', 1); //You can indicate what element with tag "elem" you want to get
 
@@ -96,10 +86,9 @@ Second method finds second children in your main dom("head" at example) and all 
 You can also use this method together:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
 $html->find('head')->children(0); //It can be link
 
@@ -110,10 +99,9 @@ $html->find('head')->children(0); //It can be link
 You can find text easily using this method:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('url or href to file');
 
 $html->findAllText(); //Finds all text data on dom(or elem)
 
@@ -126,10 +114,9 @@ It return the array with text from all children elements.
 If you want to get arguments from some element, use this:
 
 ```PHP
-use ShamanHead\PhpPorser\Dom as Dom;
+use ShamanHead\PhpPorser\App\Dom as Dom;
 
-$html = new Dom;
-$html->setHref("Href to your file or site");
+$html = new Dom('href');
 $html->find('html')->contents(); //Finds all arguments in elem
 $html->find('a')->findParam('src'); //Finds certain argument
 
@@ -161,10 +148,6 @@ Thats how my script handles something like that:
  </p>
 </span>
 ```
-
-<h3>Contributors</h3>
-ShamanHead - Main dev
-Wterh - For toxic behavior and some tips
 
 <h3 id='License'>License</h3>
 

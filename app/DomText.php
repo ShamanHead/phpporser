@@ -7,7 +7,7 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser;
+namespace ShamanHead\PhpPorser\App;
 
 class DomText{
 	private $__TEXT = [];

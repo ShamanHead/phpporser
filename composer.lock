@@ -4,53 +4,12 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d42d66e8eb036c49edd27f92ca4aa9ae",
-    "packages": [
-        {
-            "name": "shamanhead/php-logger",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/ShamanHead/php-logger.git",
-                "reference": "be8c6ed33d86e0c676dd86245763edb49e4d2cb6"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/ShamanHead/php-logger/zipball/be8c6ed33d86e0c676dd86245763edb49e4d2cb6",
-                "reference": "be8c6ed33d86e0c676dd86245763edb49e4d2cb6",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=7.2"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "app/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "AGPL-3.0-or-later"
-            ],
-            "description": "Log your work!",
-            "homepage": "https://github.com/ShamanHead/php-logger",
-            "keywords": [
-                "library",
-                "log",
-                "logs",
-                "package",
-                "php"
-            ],
-            "time": "2021-04-25T19:14:54+00:00"
-        }
-    ],
+    "content-hash": "5d9b1e3894c4a7fc5a738b93025c7214",
+    "packages": [],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "shamanhead/php-logger": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
