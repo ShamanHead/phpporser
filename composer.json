@@ -7,8 +7,7 @@
     "license": "AGPL-3.0-or-later",
     "minimum-stability": "stable",
      "require": {
-        "php": ">=7.2",
-        "shamanhead/php-logger": "dev-master"
+        "php": ">=7.2"
     },
     "autoload": {
         "classmap": ["app/"]

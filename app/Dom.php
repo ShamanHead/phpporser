@@ -7,93 +7,140 @@
 	Mail: arsenii.romanovskii85@gmail.com
 */
 
-namespace ShamanHead\PhpPorser;
+namespace ShamanHead\PhpPorser\App;
 
-require "vendor/autoload.php";
+class Dom
+{
 
-use ShamanHead\PhpLogger\LoggerFactory as LoggerFactory;
-use ShamanHead\PhpLogger\PrefixTable as PrefixTable;
+	/**
+	 * Source text of received html.
+	 * @var string
+	 */
 
-class Dom{
+	public $__SOURCE_TEXT = false;
 
-	private $__SOURCE_TEXT = false;
+	/**
+	 * Tree with all data. Every leaf of tree is element, or text and comments.
+	 * @var array
+	 */
+
 	private $__DOM = false;
+
+	/**
+	 * Setting to get <style> and <script> tags from file. Not recommended to use.
+	 * @var bool
+	 */
+
 	private $__ENABLE_STYLES_SCRIPTS = false;
+
+	/**
+	 * Setting to get comments from file.
+	 * @var bool
+	 */
+
 	private $__ENABLE_COMMENTS = false;
+
+	/**
+	 * Escape symbols for lexer.
+	 * @var array
+	 */
+
   private $__ESCAPE_SYMBOLS = ["\n"," ", "\t", "\e", "\f", "\v", "\r"];
+
+	/**
+	 * Mandatory open tags matrix.
+	 * @var array
+	 */
+
   private $__MANDATORY_OPEN_ELEMENTS= [false, false, false, false];
+
+	/**
+	 * Mandatory close tags matrix.
+	 * @var array
+	 */
+
   private $__MANDATORY_CLOSE_ELEMENTS= [false, false, false];
-  private $__ERRORS = [];
+
+	/**
+	 * Href to internet page or file.
+	 * @var string
+	 */
+
 	private $__HREF = "";
-	private $__LOG = [];
+
+	/**
+	 * Standart headers for curl.
+	 * @var string
+	 */
+
 	private $__HEADERS = [
 		[CURLOPT_HEADER, 0],
 		[CURLOPT_RETURNTRANSFER, 1],
 		[CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13) Gecko/20080311 Firefox/2.0.0.13"],
 		[CURLOPT_FOLLOWLOCATION, true],
+		[CURLOPT_SSL_VERIFYHOST, false],
+		[CURLOPT_SSL_VERIFYPEER, false],
 		[CURLOPT_HTTPHEADER, array("Content-Type:multipart/form-data")]
 	];
 
-	function __construct(){
-		$loggerFactory = new LoggerFactory;
-		$prefixTable = new PrefixTable;
-		$prefixTable->add('info', '[INFO]');
-		$prefixTable->add('lexer', '[LEX]');
-		$prefixTable->add('warning', '[WARN]');
-		$loggerFactory->setPrefixes($prefixTable);
-		$loggerFactory->setFlowType('file');
-		$loggerFactory->setFileName('test.log');
-		$this->__LOG = $loggerFactory->build();
-	}
+	/**
+	 * Function that sets href to file or page for parser.
+	 * @param string $href
+	 */
 
-	public function setHref($href){
+	public function setHref(string $href){
 		$this->__HREF = $href;
 	}
 
-	public function setHeaders($headers){
+	/**
+	 * Function that sets headers for curl.
+	 * @param string $headers
+	 */
+
+	public function setHeaders(string $headers){
 		$this->__HEADERS = $headers;
 	}
 
+	/**
+	 * Function that enables comments in tree.
+	 */
+
 	public function enableComments(){
-		if($enable_comments){
 			$this->__ENABLE_COMMENTS = true;
-		}
 	}
 
-	public function getLog(){
-		return $this->__LOG;
-	}
+	/**
+	 * Function that enables <style> and <script> tags in tree.
+	 */
 
 	public function enableStylesAndScripts(){
-		if($enable_styles_scripts){
 			$this->__ENABLE_STYLES_SCRIPTS = true;
-		}
 	}
+
+	/**
+	 * Function that enables <style>, <script> tags and comments in tree.
+	 */
 
 	public function returnAll(){
-		if($enable_comments){
 			$this->__ENABLE_COMMENTS = true;
-		}
-		if($enable_styles_scripts){
 			$this->__ENABLE_STYLES_SCRIPTS = true;
-		}
 	}
 
-	/*
+	/**
+	 * Magic function.
+	 * @return string $this->__SOURCE_TEXT Source text of file or page.
+	 */
 
-	Returns string, which contains dom.
-
-	*/
 	function __toString() : string{
-		return string($this->__DOM);
+		return $this->__SOURCE_TEXT;
 	}
 
-	/*
+	/**
+	 * Main function in flow. Gets data from file and starts parsing
+	 * @return array $this->__DOM Tree of current state.
+	 */
 
-	Main function. All work is here.
-
-	*/
-	public function dom(){
+	public function dom() : array{
 		if(!$this->__DOM){
 				if(!$this->__SOURCE_TEXT){
 					if(preg_match('/http(s)*:\/\//i', $this->__HREF)){
@@ -102,40 +149,33 @@ class Dom{
 						$this->__SOURCE_TEXT = file_get_contents($this->__HREF);
 					}
 				}
-				$this->__LOG->send('info', 'Start listening.');
 				$this->__DOM = $this->node($this->__SOURCE_TEXT)[0];
 			}
 		return $this->__DOM;
 	}
 
-	public function addNode(array $cords, Node $node){
+	/**
+	 * Service function that finds first position of char, which is not space.
+	 * @param  int $position Position, where spaces is.
+	 * @param  string $text  Text to find
+	 * @return int First founded position, where char is not space.
+	 */
 
-	}
-
-	public function deleteNode(array $cords){
-
-	}
-
-	/*
-
-	Space deleter.
-
-	*/
-	private function spaceJitter($position, $text) : int{
+	private function spaceJitter(int $position, string $text) : int{
 			$text_strlen = strlen($text);
 			for($i = $position+1;$i < $text_strlen;$i++){
 				if($text[$i] != ' ') return $i;
 			}
-			return false;
 		}
 
-	/*
+	/**
+	 * Service function. Checks, is current token is singleton token.
+	 * @param  string $tag
+	 * @return bool
+	 */
 
-	Checks, is current token is singleton token.
-
-	*/
 	private function isSingleton(string $tag) : bool{
-			$non_close_tags = ['area','base','basefont','bgsound','br','hr','col','command','embed','img','input','isindex','keygen','link','meta','param','source','track','wbr','!DOCTYPE', 'use', 'path', 'rect'];
+			$non_close_tags = ['area','base','basefont','bgsound','br','hr','col','command','embed','img','input','isindex','keygen','link','meta','param','source','track','wbr','!DOCTYPE', 'use', 'path'];
 			for($i = 0;$i < count($non_close_tags);$i++){
 				if(strcasecmp($this->escapeSymbols($this->__ESCAPE_SYMBOLS,$tag),$non_close_tags[$i]) == 0){
 					return true;
@@ -144,12 +184,14 @@ class Dom{
 			return false;
 		}
 
-	/*
+	/**
+	 * Just Another Bicycle.
+	 * @param  array  $symb Array of symbols to escape.
+	 * @param  string $text Text to refactoring.
+	 * @return string Text without $symb symbols.
+	 */
 
-	Just Another Bicycle.
-
-	*/
-	private function escapeSymbols(array $symb, string $text){
+	private function escapeSymbols(array $symb, string $text) : string{
 			$result = '';
 			$finded = false;
 			for($i = 0;$i < strlen($text);$i++){
@@ -167,12 +209,14 @@ class Dom{
 			return $result;
 	}
 
+	/**
+	 * One of main functions. Creates tree of tokens.
+	 * @param  array  $stack     Current list of tokens.
+	 * @param  int    $pointer   For recurtion. Sets where last recurtion is stopped.
+	 * @param  array  $main_tag  Parent tag of recurtion.
+	 * @param  array  $open_tags Current list of open tags. If not all tags closed, close tags from this list.
+	 */
 
-	/*
-
-
-
-	*/
 	private function stackRecurtion(array $stack, int $pointer, array $main_tag = [], array $open_tags = []){
 		$result = [];
 		for($i = $pointer;$i < count($stack);$i++){
@@ -217,10 +261,8 @@ class Dom{
 			  			$open_tags[$finded]['count']--;
 			  			$splice_tag = ['tag' => $open_tags[$finded]['tag'], 'is_closing' => true];
 						array_splice($result, $i, 0, [$splice_tag]);
-						$this->__LOG->send('lexer', 'Missing tag <'.$current_token['tag'].'> at '.$current_token['pointer']);
 						return [$result, $i-1, $open_tags];
 			  		}else{
-			  			$this->__LOG->send('lexer', 'Excess tag <'.$current_token['tag'].'> at '.$current_token['pointer']);
 			  			continue;
 			  		}
 			  }
@@ -234,11 +276,14 @@ class Dom{
 		return [$result, $i, $open_tags];
 	}
 
-	private function getNearbyTags(array $stack, int $pointer){
-		return '<'.$stack[$i-3]['tag'].'>'.'<'.$stack[$i-2]['tag'].'>'.'<'.$stack[$i-1]['tag'].'>'.'<'.$stack[$i]['tag'].'>'.'<'.$stack[$i+1]['tag'].'>'.'<'.$stack[$i+2]['tag'].'>'.'<'.$stack[$i+3]['tag'].'>';
-	}
+	/**
+	 * Service function. Escapes comments and returns data, which comment contains.
+	 * @param  string  $html     Source html to work.
+	 * @param  integer $position Position, where last recurtion is stopped.
+	 * @return array
+	 */
 
-	private function escapeComments($html, $position = 0){
+	private function escapeComments(string $html, $position = 0) : array{
 				$result = "";
 				$open_tag_position = 0;
       			$html_strlen = strlen($html);
@@ -256,6 +301,13 @@ class Dom{
 				}
 
 			}
+
+	/**
+	 * Deprecated, but works.
+	 * @param  boolean $dom
+	 * @param  integer $level
+	 * @return string
+	 */
 
 	public function safeHTML($dom = false, int $level = 0) : string{
 		$result = '';
@@ -317,6 +369,13 @@ class Dom{
 		}
 		return $result;
 	}
+
+	/**
+	 * One of main functions. Adds tag to stack, founded from source text.
+	 * @param  string  $html      Source text to work.
+	 * @param  integer $f_pointer Pointer, where need to start work.
+	 * @return array              Return array with tag information.
+	 */
 
 	public function readTag(string $html, int $f_pointer = 0) : array{
 		$result = ['is_closing' => false, 'is_singleton' => false];
@@ -429,7 +488,7 @@ class Dom{
 				if($state == 'attribute' && $attribute){
 					$state = 'attribute_value_starting';
 					}else if($state =='attribute_value_starting'){
-						return ['error_code' => 3, 'Html syntax error ', 'pointer' => $i];
+						return ['error_code' => 3, 'Html syntax error ', 'pointer' => $i.($i-1).($i-2).($i-3).($i-4).($i-5)];
 					}else if($state == 'attribute_value'){
 						$value .= $html[$i];
 					}
@@ -476,6 +535,13 @@ class Dom{
 			return $result;
 	}
 
+	/**
+	 * One of main functions. Creates stack.
+	 * @param  string  $html      Source text.
+	 * @param  integer $f_pointer Pointer, where
+	 * @return array              [description]
+	 */
+
 	private function node(string $html, int $f_pointer = 0) : array {
 		$lenght = strlen($html);
 
@@ -499,6 +565,9 @@ class Dom{
 						 $stack[] = ['tag' => '__COMMENT', htmlspecialchars($comment[1])];
 					}
 					$i = $comment[0]-1;
+					if(!isset($comment[0])){
+						die(print_r($comment));
+					}
 					continue;
 				}
 				$temporary_token = $this->readTag($html, $i);
@@ -511,7 +580,8 @@ class Dom{
 					continue;
 				}else
 				if(isset($temporary_token['error_code']) && $temporary_token['error_code'] && !$ignore_html){
-					throw new \Exception($temporary_token[0]);
+					// throw new \Exception(print_r($temporary_token, 1));
+					return $this->stackRecurtion($stack, 0);
 				}
 				if(($temporary_token['tag'] == 'script' || $temporary_token['tag'] == 'style') && $temporary_token['is_closing'] == 0 && $s_quotes != 1){
 					$text = '';
