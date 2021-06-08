@@ -116,6 +116,7 @@ print_r($dom->class('main')->id('firstHeading')->tag('h1')->array());
 ?>
 ```
 <h2>Working with text</h2>
+
 ```PHP
 <?php
 
