@@ -9,387 +9,226 @@
 
 namespace ShamanHead\PhpPorser\App;
 
-class Element implements ElementInterface
+/**
+ * Class Element
+ * @package ShamanHead\PhpPorser\App
+ */
+class Element
 {
 
-	private $__DOM = [];
-	private $__ELEMENT = '';
-	private $__ELEMENT_TYPE = '';
-	public $__ELEMENT_CONTENTS = [];
-	private $__ELEMENT_DOM = [];
-	private $__ELEMENT_NUMBER = 0;
-  public $__COUNT = 0;
+    /**
+     * @var array
+     */
+    private $__DOM = [];
+    /**
+     * @var array
+     */
+    public $__ELEMENT_DOM = [];
+    /**
+     * @var int
+     */
+    public $__COUNT = 0;
 
-	function __construct(array $dom, string $element, int $number){
-		$this->__DOM = $dom;
-		$this->__ELEMENT = str_replace(' ', '',$element);
-		switch ($this->__ELEMENT[0]){
-			case '.':
-				$this->__ELEMENT_TYPE = 'class';
-				$this->__ELEMENT = str_replace('.', '',$element);
-			break;
-			case '#':
-				$this->__ELEMENT_TYPE = 'id';
-				$this->__ELEMENT = str_replace('#', '',$element);
-			break;
-			default:
-				$this->__ELEMENT_TYPE = 'tag';
-			break;
-		}
-		$this->__ELEMENT_DOM = $this->oneDom($this->parsDom($this->__DOM, $number)[0]);
-		$this->__COUNT = count($this->__ELEMENT_DOM);
-	}
+    /**
+     * Element constructor.
+     * @param array $dom
+     * @param array|null $element
+     */
+    function __construct(array $dom, array $element = null)
+    {
+        $this->__PARENT_DOM = $dom;
+        if ($element == null) {
+            $this->__DOM = $this->__PARENT_DOM;
+        } else $this->__DOM = $this->parsDom($element, $this->__PARENT_DOM);
+        $this->__COUNT = count($this->__DOM);
+    }
 
-	public function contents(){
-		return $this->__ELEMENT_CONTENTS;
-	}
+    /**
+     * Walks through the tree and finds element with $element params.
+     * @param array $element Search params
+     * @param array $dom Dom tree
+     * @return array List of founded elements
+     * @throws \Exception
+     */
+    public function parsDom(array $element, array $dom): array
+    {
 
-	public function findProperty($name){
-		$result = [];
-		for($i = 0;$i < count($this->__ELEMENT_CONTENTS);$i++){
-			if(isset($this->__ELEMENT_CONTENTS[$i][$name])){
-				$result[] =$this->__ELEMENT_CONTENTS[$i][$name];
-			}
-		}
-		return $result;
-	}
+        $elementName = $element[0];
+        $elementValue = $element[1];
 
-	private function parsDom($dom = false, $number = -1, $point = 0){
-		if(!$dom) $dom = $this->__DOM;
-		$temporary_dom = [];
-		for($i = 0;$i < count($dom);$i++){
-			if($this->__ELEMENT_TYPE == 'tag'){
-				if(isset($dom[$i]['tag']) && ($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT')) continue;
-				if((!isset($dom[$i]['tag']) || strcasecmp($dom[$i]['tag'], $this->__ELEMENT) != 0) && (!isset($dom[$i]['is_closing']) || $dom[$i]['is_closing'] != true)){
-					if(isset($dom[$i][0])){
-						$obj = $this->parsDom($dom[$i],$number, $point);
-						if($obj[0]){
-							if(isset($obj[1]) == false){
-								return [$obj];
-							}else{
-								$point = $obj[1];
-								array_push($temporary_dom, $obj[0]);
-							}
-						}
-					}
-				}else if($dom[$i]['is_closing'] != true){
-					$obj = $this->parsDom($dom[$i],$number, $point);
-					if(isset($obj[1]) == false){
-						return [$obj];
-					}else{
-						$point = $obj[1]+1;
-						if($dom[$i]['is_singleton']){
-							array_push($temporary_dom, $dom[$i]);
-						}else{
-							array_push($temporary_dom, $dom[$i][0]);
-						}
-					}
-					if(($this->__ELEMENT_CONTENTS == [] && $number >= 1) || $number < 1){
-						$contents = [];
-						for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
-							if($keys[$j] !== 0){
-								$contents[$keys[$j]] = $dom[$i][$keys[$j]];
-							}
-						}
-						array_push($this->__ELEMENT_CONTENTS, $contents);
-					}
-					if($point == $number-1){
-						return [$dom[$i][0]];
-					}
-				}
-			}
-			if($this->__ELEMENT_TYPE == 'id' || $this->__ELEMENT_TYPE == 'class'){
-				if((isset($dom[$i]['tag'])) && ($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT')) continue;
-				if(isset($dom[$i]) && array_key_exists($this->__ELEMENT_TYPE, $dom[$i]) && !$dom[$i][$this->__ELEMENT_TYPE]){
-					if(isset($dom[$i][0])){
-						$obj = $this->parsDom($dom[$i],$number, $point);
-						if($obj[0]){
-							if(isset($obj[1]) == false){
-								return [$obj];
-							}else{
-								$point = $obj[1];
-								array_push($temporary_dom, $obj[0]);
-							}
-						}
-					}
-				}else{
-					$finded = false;
-					for($j = 0;$j < count(isset($dom[$i][$this->__ELEMENT_TYPE]) ? $dom[$i][$this->__ELEMENT_TYPE] : []);$j++){
-						if(array_key_exists($this->__ELEMENT_TYPE, isset($dom[$i]) ? $dom[$i] : []) && strcasecmp($dom[$i][$this->__ELEMENT_TYPE][$j], $this->__ELEMENT) == 0){
-							$finded = true;
-						}
-					}
-					if($finded){
-						$obj = $this->parsDom($dom[$i],$number, $point);
-						if($point == $number-1){
-							if(($this->__ELEMENT_CONTENTS == [] && $number >= 1) || $number < 1){
-								$contents = [];
-								for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
-									if($keys[$j] !== 0){
-										$contents[$keys[$j]] = $dom[$i][$keys[$j]];
-									}
-								}
-								array_push($this->__ELEMENT_CONTENTS, $contents);
-							}
-							return [$dom[$i][0]];
-						}
-						if(isset($obj[1]) == false){
-							return [$obj];
-						}else{
-							$point = $obj[1]+1;
-							if($dom[$i]['is_singleton']){
-								array_push($temporary_dom, $dom[$i]);
-							}else{
-								array_push($temporary_dom, $dom[$i][0]);
-							}
-							$num = count($this->__ELEMENT_CONTENTS);
-							if(($this->__ELEMENT_CONTENTS == [] && $number >= 1) || $number < 1){
-								$contents = [];
-								for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
-									if($keys[$j] !== 0){
-										$contents[$keys[$j]] = $dom[$i][$keys[$j]];
-									}
-								}
-								array_push($this->__ELEMENT_CONTENTS, $contents);
-							}
-						}
-					}else{
-						if(isset($dom[$i][0])){
-							$obj = $this->parsDom($dom[$i],$number, $point);
-							if($obj[0]){
-								if(isset($obj[1]) == false){
-									return [$obj];
-								}else{
-									$point = $obj[1];
-									array_push($temporary_dom, $obj[0]);
-								}
-							}
-							if(empty($obj[0])){
-								continue;
-							}
-						}
-					}
-				}
-			}
-		}
-		return [$this->oneDom($temporary_dom), $point];
-	}
+        if (!isset($elementValue) || !isset($elementName)) {
+            throw new \Exception('Element params can\'t be empty');
+        }
 
-	public function getCount($element = false, $dom = '', $count = 0) : array{
-		if($dom == '') $dom = $this->__ELEMENT_DOM;
-		for($i = 0; $i < count($dom);$i++){
-			if(isset($dom[$i]['tag'])){
-				if($element != false){
-					switch($element[0]){
-						case '.':
-							$class = str_replace('.', '', $element);
-							if(isset($dom[$i]['class'])){
-								$found = false;
-								for($u = 0;$u < count($dom[$i]['class']);$u++){
-									if($dom[$i]['class'][$u] == $class){
-										$found = true;
-										// die($class." ".$dom[$i]['class'][$u]);
-										break;
-									}
-								}
-								if($found){
-									$count++;
-								}
-							}
-							break;
-						case '#':
-							break;
-						default:
-						if(isset($dom[$i]['tag']) && $dom[$i]['tag'] == $element){
-							$count++;
-						}
-							break;
-					}
-				}else{
-					$count++;
-				}
-			}
-			if(isset($dom[$i][0]) && !isset($dom[$i]['tag'])){
-				$rec = $this->getCount($element,$dom[$i], $count);
-				$count = $rec[1];
-			}
-		}
-		return [$dom, $count];
-	}
+        $result = [];
 
-	public function viewDom(){
-		return $this->__ELEMENT_DOM;
-	}
+        for ($i = 0; $i < count($dom); $i++) {
+            $found = false;
+            if (isset($dom[$i][$elementName])) {
+                if ($elementName == 'id' || $elementName == 'class') {
+                    for ($k = 0; $k < count($dom[$i][$elementName]); $k++) {
+                        if ($dom[$i][$elementName][$k] == $elementValue) {
+                            $found = true;
+                        }
+                    }
+                } else if ($dom[$i][$elementName] == $elementValue) $found = true;
+                if ($found) {
+                    if ($dom[$i]['is_singleton']) {
+                        $result = array_merge($result, [$dom[$i]]);
+                    } else if ($dom[$i]['is_closing'] != true) {
+                        $result = array_merge($result, [$dom[$i]], $this->parsDom($element, $dom[$i]));
+                    }
+                } else if ($dom[$i]['tag'] != '__TEXT' && $dom[$i]['tag'] != '__COMMENT') {
+                    $result = array_merge($result, $this->parsDom($element, $dom[$i]));
+                }
+            } else if (isset($dom[$i][0]) && isset($dom[$i]['tag']) && $dom[$i]['tag'] != '__TEXT' && $dom[$i]['tag'] != '__COMMENT') {
+                $result = array_merge($result, $this->parsDom($element, $dom[$i][0]));
+            } else if (isset($dom[$i][0]) && !isset($dom[$i]['tag'])) {
+                $result = array_merge($result, $this->parsDom($element, $dom[$i]));
+            }
+        }
 
-	public function findAllText($returnParent = false,$dom = false, $parent = false) : DomText{
-		if(!$dom) $dom = $this->oneDom($this->__ELEMENT_DOM);
-		$result = [];
-		for($i = 0;$i < count($dom);$i++){
-			if(isset($dom[$i]['tag']) && $dom[$i]['tag'] == '__TEXT'){
-				array_push($result, ($returnParent ? [$parent,$dom[$i][0]] : $dom[$i][0]));
-			}else if(isset($dom[$i]['tag'])  && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']){
-				$obj = $this->findAllText($returnParent, $dom[$i], $dom[$i])->contents();
-				for($j = 0;$j < count($obj);$j++){
-					$result[] = $obj[$j];
-				}
-			}else if(!isset($dom[$i]['tag']) && isset($dom[$i][0])){
-				$obj = $this->findAllText($returnParent, $dom[$i], ($returnParent ?  @array_diff_key($parent, [0]) : false))->contents();
-				for($j = 0;$j < count($obj);$j++){
-					$result[] = $obj[$j];
-				}
-			}
-		}
-		return new DomText($result);
-	}
+        return $result;
+    }
 
-	public function getElementType(){
-		return $this->__ELEMENT_TYPE;
-	}
+    /**
+     * Finds attribute by name.
+     * @param array $attr Array with attribute names
+     * @param bool $strict Strict mode (for multiple attrs only)
+     * @return array
+     */
+    public function attr(array $attr, bool $strict = true): array
+    {
+        $dom = $this->__DOM;
+        $result = [];
+        $counter = count($attr);
+        for ($i = 0; $i < $this->__COUNT; $i++) {
+            $element = $dom[$i];
+            $attrCount = 0;
+            $preResult = [];
+            $found = false;
+            for ($j = 0; $j < count($attr); $j++) {
+                if (isset($element[$attr[$j]])) {
+                    $preResult[] = $element[$attr[$j]];
+                    $attrCount++;
+                }
+            }
 
-	public function plainText(){
-		$result = [];
-		$this->__ELEMENT_DOM = $this->oneDom($this->__ELEMENT_DOM);
-		if(isset($this->__ELEMENT_DOM['tag'])){
-			if($this->__ELEMENT_DOM['tag'] == '__TEXT'){
-				return $this->__ELEMENT_DOM[0];
-			}
-		}else{
-			for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
-				if(isset($this->__ELEMENT_DOM[$i]['tag']) && $this->__ELEMENT_DOM[$i]['tag'] == '__TEXT'){
-					array_push($result, $this->__ELEMENT_DOM[$i][0]);
-				}
-			}
-		}
-		return new DomText($result);
-	}
+            if (($strict === true && $counter == $attrCount) || $strict === false) {
+                $found = true;
+            }
 
-	public function plainTextFromCollection(){
-		$result = [];
-		$this->__ELEMENT_DOM = $this->oneDom($this->__ELEMENT_DOM);
-		for($i = 0;$i < count($this->__ELEMENT_DOM);$i++){
-			if(isset($this->__ELEMENT_DOM[$i][0])){
-				$this->__ELEMENT_DOM[$i] = $this->oneDom($this->__ELEMENT_DOM[$i]);
-				for($j = 0;$j < count($this->__ELEMENT_DOM[$i]);$j++){
-					if($this->__ELEMENT_DOM[$i][$j]['tag'] == '__TEXT'){
-						$result[] = $this->__ELEMENT_DOM[$i][$j][0];
-					}
-				}
-			}
-		}
-		return new DomText($result);
-	}
+            if ($found === true) {
+                if ($counter > 1) {
+                    $result[] = $preResult;
+                } else {
+                    $result = array_merge($result, $preResult);
+                }
+            }
 
-	public function find(string $element, int $number = -1) : Element{
-		return new Element([$this->__ELEMENT_DOM], $element, $number);
-	}
+        }
+        return $result;
+    }
 
-	private function oneDom($dom){
-		if(gettype($dom) != 'array') return $dom;
-		$is_empty = true;
-		$is_empty_dom = $dom;
-		while(!empty($is_empty_dom) && count($is_empty_dom) <= 1 && !isset($is_empty_dom['tag'])){
-			$is_empty_dom = $is_empty_dom[0];
-		}
-		return $is_empty_dom;
-	}
+    /**
+     * @return int Count of founded elements
+     */
+    public function count(): int
+    {
+        return $this->__COUNT;
+    }
 
-	public function children(int $number) : Children{
-		$result = [];
-		$contents = [];
-		$count = 0;
-		if((isset($this->__ELEMENT_DOM[$number]['tag']) && $this->__ELEMENT_DOM[$number]['tag'] != "__TEXT" && $this->__ELEMENT_DOM[$number]['tag'] != "__COMMENT") && empty($this->__ELEMENT_DOM[$number]['is_singleton'])){
-			array_push($result, $this->__ELEMENT_DOM[$number]);
-			$count+=count($this->oneDom($this->__ELEMENT_DOM[$number][0]));
-			for($j = 0, $keys = array_keys($this->__ELEMENT_DOM[$number]);$j < count($keys);$j++){
-				if($keys[$j] !== 0){
-					$contents[$keys[$j]] = $this->__ELEMENT_DOM[$number][$keys[$j]];
-				}
-			}
-		}else{
-			$count++;
-			if(isset($this->__ELEMENT_DOM[$number])) array_push($result, $this->__ELEMENT_DOM[$number]);
-		}
-		return new Children($result, $contents, $count);
-	}
+    /**
+     * @return array List of founded elements
+     */
+    public function array(): array
+    {
+        return $this->__DOM;
+    }
 
-	public function safeHTML($dom = false, int $level = 0) : string{
-		$result = '';
-		if($dom === false){
-			if(gettype($this->__ELEMENT_DOM) == 'array'){
-				$dom = $this->oneDom($this->__ELEMENT_DOM);
-			}else{
-				return true;
-			}
-		}
-		$dom = $this->oneDom($dom);
-		if(isset($dom['tag']) && isset($dom['is_singleton'])){
-			if(isset($dom['is_singleton']) && $dom['is_singleton'] == true){
-				$result .= str_repeat("\t", $level)."<".$dom['tag']."$properties>\n";
-			}else if(isset($dom['is_singleton'])){
-				$result .= str_repeat("\t", $level ? $level-1 : $level)."</".$dom['tag'].">\n";
-			}
-			return $result;
-		}else if(isset($dom['tag'])){
-			$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
-			$result .= $this->safeHTML($dom[$i][0], $level+1);
-		}
-		for($i = 0;$i < count($dom);$i++){
-			if(isset($dom[$i]['tag']) && ($dom[$i]['tag'] == '__COMMENT' || $dom[$i]['tag'] == '__TEXT')){
-				$result .= str_repeat("\t", $level).$dom[$i][0]."\n";
-				continue;
-			}
-			$properties = '';
-			if(!empty($dom[$i])){
-				$ficators = '';
-				for($j = 0, $keys = array_keys($dom[$i]);$j < count($keys);$j++){
-					if($keys[$j] === 'class' || $keys[$j] === 'id'){
-						for($u = 0;$u < count($dom[$i][$keys[$j]]);$u++){
-							if($u == count($dom[$i][$keys[$j]])-1){
-								$ficators .= $dom[$i][$keys[$j]][$u];
-								continue;
-							}
-							$ficators .= $dom[$i][$keys[$j]][$u].', ';
-						}
-						$properties .= " ".$keys[$j].'=\''.$ficators.'\' ';
-					}
+    /**
+     * @return array
+     */
+    public function parentDom(): array
+    {
+        return $this->__PARENT_DOM;
+    }
 
-					if($keys[$j] !== 0 && $keys[$j] !== 'pointer' && $keys[$j] !== 'is_singleton' && $keys[$j] !== 'is_closing' && $keys[$j] !== 'tag' && $keys[$j] !== 'class' && $keys[$j] !== 'id'){
-						if($dom[$i][$keys[$j]] === true){
-							$properties .= " $keys[$j]";
-							continue;
-						}
-						$founded = false;
-						for($z = 0;$z < strlen($dom[$i][$keys[$j]]);$z++){
-							if($dom[$i][$keys[$j]][$z] == '"'){
-								$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
-								$founded = true;
-								break;
-							}
-							if($dom[$i][$keys[$j]][$z] == "'"){
-								$properties .= " $keys[$j]=\"".$dom[$i][$keys[$j]]."\"";
-								$founded = true;
-								break;
-							}
-						}
-						if($founded == false){
-							$properties .= " $keys[$j]='".$dom[$i][$keys[$j]]."'";
-						}
-					}
-				}
-			}
-			if(!empty($dom[$i][0]) && isset($dom[$i]['tag'])){
-				$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
-				$result .= $this->safeHTML($dom[$i][0], $level+1);
-			}else{
-				if(isset($dom[$i]['is_singleton']) && $dom[$i]['is_singleton'] == true){
-					$result .= str_repeat("\t", $level)."<".$dom[$i]['tag']."$properties>\n";
-				}else if(isset($dom[$i]['is_singleton'])){
-					$result .= str_repeat("\t", $level ? $level-1 : $level)."</".$dom[$i]['tag'].">\n";
-				}
-			}
-		}
-		return $result;
-	}
+    /**
+     * @param string $id
+     * @return Element
+     */
+    public function id(string $id): Element
+    {
+        return new Element($this->__DOM, ['id', $id]);
+    }
+
+    /**
+     * Creates new Element instance with tag search params.
+     * @param string $tag
+     * @return Element
+     */
+    public function tag(string $tag): Element
+    {
+        return new Element($this->__DOM, ['tag', $tag]);
+    }
+
+    /**
+     * Creates new Element instance with class search params.
+     * @param string $class
+     * @return Element
+     */
+    public function class(string $class): Element
+    {
+        return new Element($this->__DOM, ['class', $class]);
+    }
+
+    /**
+     * Creates new Element instance with custom search params.
+     * @param array $element Array with search params
+     * @return Element
+     */
+    public function custom(array $element): Element
+    {
+        return new Element($this->__DOM, $element);
+    }
+
+    /**
+     * @param int $number Number of element in tree.
+     * @return Element
+     */
+    public function select(int $number): Element
+    {
+        return new Element($this->__DOM[$number]);
+    }
+
+    /**
+     * Finds all text in $dom tree array.
+     * @param bool $dom
+     * @return DomText
+     */
+    public function text($dom = false): DomText
+    {
+        if (!$dom) $dom = $this->__DOM;
+        $result = [];
+        for ($i = 0; $i < count($dom); $i++) {
+            if (isset($dom[$i]['tag']) && $dom[$i]['tag'] == '__TEXT') {
+                array_push($result, $dom[$i][0]);
+            } else if (isset($dom[$i]['tag']) && $dom[$i]['tag'] != '__COMMENT' && !$dom[$i]['is_singleton']) {
+                $obj = $this->text($dom[$i])->contents();
+                for ($j = 0; $j < count($obj); $j++) {
+                    $result[] = $obj[$j];
+                }
+            } else if (!isset($dom[$i]['tag']) && isset($dom[$i][0])) {
+                $obj = $this->text($dom[$i])->contents();
+                for ($j = 0; $j < count($obj); $j++) {
+                    $result[] = $obj[$j];
+                }
+            }
+        }
+        return new DomText($result);
+    }
+
 }
 
 ?>

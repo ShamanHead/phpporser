@@ -9,32 +9,59 @@
 
 namespace ShamanHead\PhpPorser\App;
 
-class DomText{
-	private $__TEXT = [];
+/**
+ * Class DomText
+ * @package ShamanHead\PhpPorser\App
+ */
+class DomText
+{
+    /**
+     * @var array
+     */
+    private $__TEXT = [];
 
-	function __construct($text){
-		$this->__TEXT = $text;
-	}
+    /**
+     * DomText constructor.
+     * @param $text
+     */
+    function __construct($text)
+    {
+        $this->__TEXT = $text;
+    }
 
-	public function merge($symbol = ''){
-		if(gettype($this->__TEXT) == 'array'){
-			return implode($symbol, $this->__TEXT);
-		}else{
-			return $this->__TEXT;
-		}
-	}
+    /**
+     * Merges all founded text into string with $symbol separator.
+     * @param string $symbol
+     * @return string
+     */
+    public function merge(string $symbol = ''): string
+    {
+        return implode($symbol, $this->__TEXT);
+    }
 
-	public function getFirstElement(){
-		return isset($this->__TEXT[0]) ? $this->__TEXT[0] : false;
-	}
+    /**
+     * @return string First founded text.
+     */
+    public function first(): string
+    {
+        return isset($this->__TEXT[0]) ? $this->__TEXT[0] : false;
+    }
 
-	public function getLastElement(){
-		return end($this->__TEXT);
-	}
+    /**
+     * @return string Last founded text.
+     */
+    public function last(): string
+    {
+        return end($this->__TEXT);
+    }
 
-	function contents(){
-			return $this->__TEXT;
-	}
+    /**
+     * @return array All founded text.
+     */
+    function contents(): array
+    {
+        return $this->__TEXT;
+    }
 }
 
 ?>
